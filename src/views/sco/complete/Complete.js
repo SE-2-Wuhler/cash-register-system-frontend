@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useWindowSize } from 'react-use'
+import Confetti from 'react-confetti'
 
 function Complete() {
     const navigate = useNavigate();
@@ -62,9 +64,15 @@ function Complete() {
             }}
         />
     );
+    const { width, height } = useWindowSize()
+
 
     return (
         <div className="min-h-screen relative bg-green-50 overflow-hidden flex items-center justify-center">
+            <Confetti
+                width={width}
+                height={height}
+            />
             <div
                 ref={jointRef}
                 style={{
