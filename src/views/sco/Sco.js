@@ -251,6 +251,7 @@ const Sco = () => {
                 isOpen={showCancelDialog}
                 onClose={() => setShowCancelDialog(false)}
                 onConfirm={handleCancel}
+                message="Möchtest du den aktuellen Vorgang wirklich abbrechen? Alle gescannten Artikel werden gelöscht."
             />
 
             {barcodeLoading && (

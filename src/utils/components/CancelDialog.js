@@ -1,4 +1,4 @@
-const CancelDialog = ({ isOpen, onClose, onConfirm }) => {
+const CancelDialog = ({ isOpen, onClose, onConfirm, message }) => {
     if (!isOpen) return null;
 
     return (
@@ -9,7 +9,7 @@ const CancelDialog = ({ isOpen, onClose, onConfirm }) => {
                         Vorgang wirklich abbrechen?
                     </h3>
                     <p className="text-gray-600">
-                        Alle gescannten Artikel werden entfernt. Dieser Vorgang kann nicht rückgängig gemacht werden.
+                        {message}
                     </p>
                 </div>
                 <div className="border-t px-6 py-4 flex justify-end gap-3">
