@@ -135,7 +135,7 @@ const Pledge = () => {
     }, [notification]);
 
     return (
-        <div className="min-h-screen p-4">
+        <div className="min-h-screen p-4 bg-blue-50">
             <NotificationBar notification={notification} />
 
             {barcodeLoading && (

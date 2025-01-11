@@ -78,7 +78,7 @@ function Pay() {
   const paypalClientId = "AbV-7ICaqhM9Xn21eTHQakdRmE0F5IS83yhLr5QNQBIWvbDZcqPPytIFq3AEPKjh09a3lpmMaQMo2DyW";
   return (
     <PayPalScriptProvider options={{ "client-id": "AbV-7ICaqhM9Xn21eTHQakdRmE0F5IS83yhLr5QNQBIWvbDZcqPPytIFq3AEPKjh09a3lpmMaQMo2DyW", "currency": "EUR", "disable-funding": "card" }}>
-      <div className="min-h-screen flex items-center justify-center bg-gray-100"> {/* Hauptcontainer für vertikale Zentrierung */}
+      <div className="min-h-screen flex items-center justify-center bg-green-50"> {/* Hauptcontainer für vertikale Zentrierung */}
         <div className="bg-white rounded-2xl shadow-xl p-16 max-w-2xl w-full mx-auto"> {/* Breite angepasst und Margin für horizontale Zentrierung */}
           <h1 className="text-4xl font-bold mb-8 text-green-700 text-center tracking-tight">Checkout</h1>
 

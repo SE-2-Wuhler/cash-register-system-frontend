@@ -18,7 +18,7 @@ const NotificationBar = ({ notification }) => (
 const ProductButton = ({ item, onScan }) => (
     <button
         onClick={() => onScan(item)}
-        className="bg-green-50 hover:bg-green-100 p-3 rounded-lg text-center transition-colors w-full flex items-center gap-3"
+        className="bg-green-100 hover:bg-green-200 p-3 rounded-lg text-center transition-colors w-full flex items-center gap-3"
     >
         {/* Image container - only shown if there's a valid image URL */}
         {item.imageUrl && (
@@ -236,7 +236,7 @@ const Sco = () => {
     }, {});
 
     return (
-        <div className="h-screen p-4">
+        <div className="h-screen p-4 bg-green-50">
             <NotificationBar notification={notification} />
 
             {barcodeLoading && (
