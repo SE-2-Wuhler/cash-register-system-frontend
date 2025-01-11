@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Trash2, CreditCard } from 'lucide-react';
+import { AlertCircle, Trash2, CreditCard, XCircle } from 'lucide-react';
 import { productService } from '../../api/services/productService';
 import { useApi } from '../../hooks/useApi';
 import { useNavigate } from 'react-router-dom';
+import CancelDialog from '../../utils/components/CancelDialog';
 const NotificationBar = ({ notification }) => (
     <div className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-500 ${notification ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className={`${notification?.type === 'error' ? 'bg-red-500' : 'bg-blue-500'} text-white p-4 flex items-center justify-center shadow-lg`}>
@@ -45,6 +46,7 @@ const Pledge = () => {
     const [notification, setNotification] = useState(null);
     const [barcodeBuffer, setBarcodeBuffer] = useState('');
     const [lastKeypressTime, setLastKeypressTime] = useState(0);
+    const [showCancelDialog, setShowCancelDialog] = useState(false);
 
     const {
         execute: fetchProductByBarcode,
@@ -134,9 +136,31 @@ const Pledge = () => {
         }
     }, [notification]);
 
+    const handleCancel = () => {
+        if (scannedBottles.length > 0) {
+            setShowCancelDialog(true);
+        } else {
+            setScannedBottles([]);
+            navigate('/');
+        }
+    };
+
+    const handleCancelConfirm = () => {
+        setScannedBottles([]);
+        setShowCancelDialog(false);
+        navigate('/');
+    }
+
     return (
         <div className="min-h-screen p-4 bg-blue-50">
             <NotificationBar notification={notification} />
+
+            <CancelDialog
+                isOpen={showCancelDialog}
+                onClose={() => setShowCancelDialog(false)}
+                onConfirm={() => handleCancelConfirm()}
+                message={`Möchten Sie den Vorgang wirklich abbrechen? Alle gescannten Flaschen werden gelöscht.`}
+            />
 
             {barcodeLoading && (
                 <div className="fixed top-4 right-4 bg-yellow-100 p-2 rounded">
@@ -177,6 +201,13 @@ const Pledge = () => {
                                 <span>Gesamt:</span>
                                 <span className="ml-3">{calculateTotal().toFixed(2)}€</span>
                             </div>
+                            <button
+                                onClick={() => handleCancel()}
+                                className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg flex items-center space-x-3 transition-colors text-lg"
+                            >
+                                <XCircle size={24} />
+                                <span>Abbrechen</span>
+                            </button>
                             <button
                                 onClick={handlePrint}
                                 className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg flex items-center space-x-3 transition-colors text-lg disabled:opacity-50 disabled:cursor-not-allowed"

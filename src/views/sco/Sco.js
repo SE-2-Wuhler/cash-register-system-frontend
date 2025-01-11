@@ -230,10 +230,19 @@ const Sco = () => {
     }, {});
 
     const handleCancel = () => {
+        if (scannedItems.length > 0) {
+            setShowCancelDialog(true);
+        } else {
+            setScannedItems([]);
+            navigate('/');
+        }
+    };
+
+    const handleCancelConfirm = () => {
         setScannedItems([]);
         setShowCancelDialog(false);
-        navigate('/');  // oder wohin auch immer der Nutzer zurückkehren soll
-    };
+        navigate('/');
+    }
 
     const calculateTotal = () => {
         return scannedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -250,8 +259,8 @@ const Sco = () => {
             <CancelDialog
                 isOpen={showCancelDialog}
                 onClose={() => setShowCancelDialog(false)}
-                onConfirm={handleCancel}
-                message="Möchtest du den aktuellen Vorgang wirklich abbrechen? Alle gescannten Artikel werden gelöscht."
+                onConfirm={handleCancelConfirm}
+                message="Möchtest du den aktuellen Vorgang wirklich abbrechen? Alle gescannten Artikel gehen verloren."
             />
 
             {barcodeLoading && (
@@ -296,15 +305,13 @@ const Sco = () => {
                                 <span className="ml-3">{calculateTotal().toFixed(2)}€</span>
                             </div>
                             <div className="flex gap-3">
-                                {scannedItems.length > 0 && (
                                     <button
-                                        onClick={() => setShowCancelDialog(true)}
+                                    onClick={handleCancel}
                                         className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg flex items-center space-x-3 transition-colors text-lg"
                                     >
                                         <XCircle size={24} />
                                         <span>Abbrechen</span>
-                                    </button>
-                                )}
+                                </button>
                                 <button
                                     onClick={handlePayment}
                                     className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg flex items-center space-x-3 transition-colors text-lg"
