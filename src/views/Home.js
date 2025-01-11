@@ -17,7 +17,7 @@ const HomePage = () => {
         <div className="grid md:grid-cols-2 gap-8 px-4">
           {/* Shopping Card */}
           <div 
-            onClick={() => navigate('/shop')}
+            onClick={() => navigate('/sco')}
             className="group cursor-pointer bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
           >
             <div className="p-8">
@@ -36,7 +36,7 @@ const HomePage = () => {
 
           {/* Recycle Card */}
           <div 
-            onClick={() => navigate('/pfand')}
+            onClick={() => navigate('/pledge')}
             className="group cursor-pointer bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
           >
             <div className="p-8">
