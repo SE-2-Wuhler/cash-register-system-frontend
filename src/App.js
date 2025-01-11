@@ -20,7 +20,6 @@ function App() {
         <Route path="/sco/pay" element={<Pay />} />
         <Route path="/pledge" element={<Pledge />} />
         <Route path="/sco/complete" element={<Complete />} />
-
         <Route path="*" element={<Home />} />
       </Routes>
     </BrowserRouter>
