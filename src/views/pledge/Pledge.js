@@ -144,8 +144,8 @@ const Pledge = () => {
                 </div>
             )}
 
-            <div className="max-w-2xl mx-auto mt-16">
-                <div className="bg-white rounded-lg shadow-lg flex flex-col h-[calc(100vh-8rem)]">
+            <div className="max-w-2xl rounded-lg mx-auto mt-16">
+                <div className="bg-white rounded-lg p-1 shadow-lg flex flex-col h-[calc(100vh-8rem)]">
                     {/* Header */}
                     <div className="p-6 border-b">
                         <h2 className="text-2xl font-bold">Pfandrückgabe</h2>

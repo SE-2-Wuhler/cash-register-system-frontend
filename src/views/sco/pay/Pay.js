@@ -132,7 +132,7 @@ function Pay() {
           </div>
 
           <div className="border-t border-gray-200 pt-8 text-center text-sm text-gray-500">
-            Durch Klicken auf "Mit PayPal bezahlen" oder "Barzahlung" stimmen Sie unseren <a href="#" className="text-green-600 underline">Nutzungsbedingungen</a> und <a href="#" className="text-green-600">Datenschutzbestimmungen</a> zu.
+            Durch Klicken auf "Mit PayPal bezahlen" oder "Barzahlung" stimmen Sie unseren <a href="#" className="text-green-600">Nutzungsbedingungen</a> und <a href="#" className="text-green-600">Datenschutzbestimmungen</a> zu.
           </div>
         </div>
       </div>

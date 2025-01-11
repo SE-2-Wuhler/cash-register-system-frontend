@@ -8,6 +8,11 @@ const HomePage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-6">
       <div className="max-w-4xl mx-auto pt-12">
+        {/* Logo hinzufügen */}
+        <div className="text-center mb-8"> {/* Abstand nach unten angepasst */}
+          <img src={process.env.PUBLIC_URL + "/favicon.png"} alt="Wühlmarkt Logo" className="h-24 mx-auto" /> {/* Höhe und Zentrierung */}
+        </div>
+
         <div className="text-center mb-16">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Willkommen im Wühlmarkt</h1>
           <p className="text-lg text-gray-600">Was möchten Sie heute tun?</p>
