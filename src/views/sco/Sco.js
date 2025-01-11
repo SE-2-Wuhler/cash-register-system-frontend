@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Trash2, Plus, Minus, CreditCard } from 'lucide-react';
+import { AlertCircle, Trash2, Plus, Minus, CreditCard, XCircle } from 'lucide-react';
 import { productService } from '../../api/services/productService';
 import { useApi } from '../../hooks/useApi';
 import { useNavigate } from 'react-router-dom';
+import CancelDialog from '../../utils/components/CancelDialog';
 
 
 // Previous component definitions remain the same
@@ -103,12 +104,12 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => (
 
 const Sco = () => {
     const navigate = useNavigate();
-
     const [scannedItems, setScannedItems] = useState([]);
     const [notification, setNotification] = useState(null);
     const [produceItems, setProduceItems] = useState([]);
     const [barcodeBuffer, setBarcodeBuffer] = useState('');
-    const [lastKeypressTime, setLastKeypressTime] = useState(0); 
+    const [lastKeypressTime, setLastKeypressTime] = useState(0);
+    const [showCancelDialog, setShowCancelDialog] = useState(false);
 
     const {
         data: items,
@@ -219,6 +220,21 @@ const Sco = () => {
         setScannedItems(prev => prev.filter(item => item.id !== id));
     };
 
+    const groupedItems = produceItems.reduce((groups, item) => {
+        const key = item.category;
+        if (!groups[key]) {
+            groups[key] = [];
+        }
+        groups[key].push(item);
+        return groups;
+    }, {});
+
+    const handleCancel = () => {
+        setScannedItems([]);
+        setShowCancelDialog(false);
+        navigate('/');  // oder wohin auch immer der Nutzer zurückkehren soll
+    };
+
     const calculateTotal = () => {
         return scannedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     };
@@ -227,17 +243,15 @@ const Sco = () => {
         navigate('/sco/pay', { bookingId: '1' });
     };
 
-    const groupedItems = produceItems.reduce((acc, item) => {
-        if (!acc[item.category]) {
-            acc[item.category] = [];
-        }
-        acc[item.category].push(item);
-        return acc;
-    }, {});
-
     return (
         <div className="h-screen p-4 bg-green-50">
             <NotificationBar notification={notification} />
+
+            <CancelDialog
+                isOpen={showCancelDialog}
+                onClose={() => setShowCancelDialog(false)}
+                onConfirm={handleCancel}
+            />
 
             {barcodeLoading && (
                 <div className="fixed top-4 right-4 bg-yellow-100 p-2 rounded">
@@ -280,19 +294,30 @@ const Sco = () => {
                                 <span>Gesamt:</span>
                                 <span className="ml-3">{calculateTotal().toFixed(2)}€</span>
                             </div>
-                            <button
-                                onClick={handlePayment}
-                                className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg flex items-center space-x-3 transition-colors text-lg"
-                                disabled={scannedItems.length === 0}
-                            >
-                                <CreditCard size={24} />
-                                <span>Bezahlen</span>
-                            </button>
+                            <div className="flex gap-3">
+                                {scannedItems.length > 0 && (
+                                    <button
+                                        onClick={() => setShowCancelDialog(true)}
+                                        className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg flex items-center space-x-3 transition-colors text-lg"
+                                    >
+                                        <XCircle size={24} />
+                                        <span>Abbrechen</span>
+                                    </button>
+                                )}
+                                <button
+                                    onClick={handlePayment}
+                                    className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg flex items-center space-x-3 transition-colors text-lg"
+                                    disabled={scannedItems.length === 0}
+                                >
+                                    <CreditCard size={24} />
+                                    <span>Bezahlen</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Right side - Produce Selection */}
+                {/* Right side bleibt gleich... */}
                 <div className="w-1/2 bg-white rounded-lg shadow p-4 overflow-y-auto">
                     <h2 className="text-lg font-bold mb-4">Obst & Gemüse</h2>
                     {loading ? (

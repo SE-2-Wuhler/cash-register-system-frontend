@@ -1,7 +1,7 @@
 // src/api/services/productService.js
 
 // Mock data for fruits and vegetables
-const MOCK_PRODUCE = [
+let MOCK_PRODUCE = [
     {
         id: 'p1',
         name: 'Äpfel',
@@ -147,6 +147,13 @@ export const productService = {
             product.name.toLowerCase().includes(searchTerm) ||
             product.barcode.includes(searchTerm)
         );
+    },
+
+    addProduct: async (productBarcode) => {
+        await delay(800);
+        const newProduct = { id: `b${MOCK_PRODUCTS.length + 1}`, barcode: productBarcode, name: 'Neues Produkt', price: 0, unit: 'stk', pledgeAmount: 0 };
+        MOCK_PRODUCTS.push(newProduct);
+        return newProduct;
     }
 };
 
