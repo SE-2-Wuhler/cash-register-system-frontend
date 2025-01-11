@@ -1,55 +1,98 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Trash2, Plus, Minus } from 'lucide-react';
+import { AlertCircle, Trash2, Plus, Minus, CreditCard } from 'lucide-react';
+import { produceService } from '../../api/services/produceService';
+import { useApi } from '../../hooks/useApi';
+import { useNavigate } from 'react-router-dom';
 
-// Mock API Service
-const mockApi = {
-    getProduceItems: () => new Promise((resolve) => {
-        // Simulate network delay
-        setTimeout(() => {
-            resolve([
-                { id: 'p1', name: 'Äpfel', price: 2.99, unit: 'kg', category: 'fruit' },
-                { id: 'p2', name: 'Bananen', price: 1.99, unit: 'kg', category: 'fruit' },
-                { id: 'p3', name: 'Karotten', price: 1.49, unit: 'kg', category: 'vegetable' },
-                { id: 'p4', name: 'Tomaten', price: 3.99, unit: 'kg', category: 'vegetable' },
-                { id: 'p5', name: 'Birnen', price: 2.49, unit: 'kg', category: 'fruit' },
-                { id: 'p6', name: 'Kartoffeln', price: 0.99, unit: 'kg', category: 'vegetable' },
-                { id: 'p7', name: 'Zwiebeln', price: 1.29, unit: 'kg', category: 'vegetable' },
-                { id: 'p8', name: 'Orangen', price: 2.79, unit: 'kg', category: 'fruit' }
-            ]);
-        }, 1000); // 1 second delay
-    })
-};
+
+// Extraktion der Notification-Komponente
+const NotificationBar = ({ notification }) => (
+    <div className={`fixed top-0 left-0 right-0 transition-transform duration-500 ${notification ? 'translate-y-0' : '-translate-y-full'}`}>
+        <div className="bg-green-500 text-white p-4 flex items-center justify-center shadow-lg">
+            <AlertCircle className="mr-2" />
+            <span className="text-lg font-semibold">{notification?.text}</span>
+        </div>
+    </div>
+);
+
+// Extraktion der Produkt-Schaltfläche
+const ProductButton = ({ item, onScan }) => (
+    <button
+        onClick={() => onScan(item)}
+        className="bg-green-100 hover:bg-green-200 p-4 rounded-lg text-center transition-colors"
+    >
+        <div className="font-semibold">{item.name}</div>
+        <div className="text-gray-600">{item.price}€/{item.unit}</div>
+        {item.isOrganic && (
+            <div className="text-green-600 text-sm mt-1">Bio</div>
+        )}
+    </button>
+);
+
+// Extraktion des Warenkorb-Items
+const CartItem = ({ item, onUpdateQuantity, onRemove }) => (
+    <div className="flex items-center justify-between border-b pb-2">
+        <div className="flex-1">
+            <div className="font-semibold">{item.name}</div>
+            <div className="text-gray-600">
+                {item.price}€ {item.isOrganic && <span className="text-green-600 ml-2">Bio</span>}
+            </div>
+        </div>
+        <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+                <button
+                    onClick={() => onUpdateQuantity(item.id, -1)}
+                    className="p-1 hover:bg-gray-100 rounded"
+                >
+                    <Minus size={20} />
+                </button>
+                <span className="w-8 text-center">{item.quantity}</span>
+                <button
+                    onClick={() => onUpdateQuantity(item.id, 1)}
+                    className="p-1 hover:bg-gray-100 rounded"
+                >
+                    <Plus size={20} />
+                </button>
+            </div>
+            <button
+                onClick={() => onRemove(item.id)}
+                className="text-red-500 hover:text-red-700 p-1"
+            >
+                <Trash2 size={20} />
+            </button>
+        </div>
+    </div>
+);
 
 const Sco = () => {
+    const navigate = useNavigate();
+
     const [scannedItems, setScannedItems] = useState([]);
     const [notification, setNotification] = useState(null);
     const [produceItems, setProduceItems] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+
+    const {
+        data: items,
+        loading,
+        error,
+        execute: fetchProduceItems
+    } = useApi(produceService.getAllProduce);
 
     useEffect(() => {
         fetchProduceItems();
-    }, []);
+    }, [fetchProduceItems]);
 
-    const fetchProduceItems = async () => {
-        try {
-            setLoading(true);
-            const items = await mockApi.getProduceItems();
+    useEffect(() => {
+        if (items) {
             setProduceItems(items);
-            setError(null);
-        } catch (err) {
-            setError('Fehler beim Laden der Produkte');
-            console.error('Error fetching produce items:', err);
-        } finally {
-            setLoading(false);
         }
-    };
+    }, [items]);
 
     const handleScan = (item) => {
         const newItem = {
+            ...item,
             id: Date.now(),
-            name: item.name,
-            price: item.price,
             quantity: 1,
         };
         setScannedItems(prev => [...prev, newItem]);
@@ -61,10 +104,7 @@ const Sco = () => {
             text: `${itemName} wurde hinzugefügt`,
             timestamp: Date.now()
         });
-
-        setTimeout(() => {
-            setNotification(null);
-        }, 3000);
+        setTimeout(() => setNotification(null), 3000);
     };
 
     const updateQuantity = (id, change) => {
@@ -72,7 +112,7 @@ const Sco = () => {
             item.id === id
                 ? { ...item, quantity: Math.max(0, item.quantity + change) }
                 : item
-        ));
+        ).filter(item => item.quantity > 0));
     };
 
     const removeItem = (id) => {
@@ -83,7 +123,11 @@ const Sco = () => {
         return scannedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     };
 
-    // Group items by category
+    const handlePayment = () => {
+        navigate('/sco/pay', { state: { scannedItems } });
+        setIsPaymentModalOpen(true);
+    };
+
     const groupedItems = produceItems.reduce((acc, item) => {
         if (!acc[item.category]) {
             acc[item.category] = [];
@@ -94,15 +138,8 @@ const Sco = () => {
 
     return (
         <div className="max-w-4xl mx-auto p-4">
-            {/* Notification Bar */}
-            <div className={`fixed top-0 left-0 right-0 transition-transform duration-500 ${notification ? 'translate-y-0' : '-translate-y-full'}`}>
-                <div className="bg-green-500 text-white p-4 flex items-center justify-center shadow-lg">
-                    <AlertCircle className="mr-2" />
-                    <span className="text-lg font-semibold">{notification?.text}</span>
-                </div>
-            </div>
+            <NotificationBar notification={notification} />
 
-            {/* Main Content */}
             <div className="mt-16">
                 {/* Obst & Gemüse Auswahl */}
                 <div className="bg-white rounded-lg shadow p-4 mb-6">
@@ -131,14 +168,7 @@ const Sco = () => {
                                 </h3>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     {items.map(item => (
-                                        <button
-                                            key={item.id}
-                                            onClick={() => handleScan(item)}
-                                            className="bg-green-100 hover:bg-green-200 p-4 rounded-lg text-center transition-colors"
-                                        >
-                                            <div className="font-semibold">{item.name}</div>
-                                            <div className="text-gray-600">{item.price}€/{item.unit}</div>
-                                        </button>
+                                        <ProductButton key={item.id} item={item} onScan={handleScan} />
                                     ))}
                                 </div>
                             </div>
@@ -146,7 +176,7 @@ const Sco = () => {
                     )}
                 </div>
 
-                {/* Scanned Items List */}
+                {/* Warenkorb */}
                 <div className="bg-white rounded-lg shadow p-4">
                     <h2 className="text-xl font-bold mb-4">Gescannte Artikel</h2>
                     {scannedItems.length === 0 ? (
@@ -156,41 +186,28 @@ const Sco = () => {
                     ) : (
                         <div className="space-y-4">
                             {scannedItems.map(item => (
-                                <div key={item.id} className="flex items-center justify-between border-b pb-2">
-                                    <div className="flex-1">
-                                        <div className="font-semibold">{item.name}</div>
-                                        <div className="text-gray-600">{item.price}€</div>
-                                    </div>
-                                    <div className="flex items-center space-x-4">
-                                        <div className="flex items-center space-x-2">
-                                            <button
-                                                onClick={() => updateQuantity(item.id, -1)}
-                                                className="p-1 hover:bg-gray-100 rounded"
-                                            >
-                                                <Minus size={20} />
-                                            </button>
-                                            <span className="w-8 text-center">{item.quantity}</span>
-                                            <button
-                                                onClick={() => updateQuantity(item.id, 1)}
-                                                className="p-1 hover:bg-gray-100 rounded"
-                                            >
-                                                <Plus size={20} />
-                                            </button>
-                                        </div>
-                                        <button
-                                            onClick={() => removeItem(item.id)}
-                                            className="text-red-500 hover:text-red-700 p-1"
-                                        >
-                                            <Trash2 size={20} />
-                                        </button>
-                                    </div>
-                                </div>
+                                <CartItem
+                                    key={item.id}
+                                    item={item}
+                                    onUpdateQuantity={updateQuantity}
+                                    onRemove={removeItem}
+                                />
                             ))}
-                            <div className="flex justify-between items-center pt-4 font-bold text-xl">
-                                <span>Gesamt:</span>
-                                <span>{calculateTotal().toFixed(2)}€</span>
+                                <div className="flex justify-between items-center pt-4 border-t">
+                                    <div className="font-bold text-xl">
+                                        <span>Gesamt:</span>
+                                        <span className="ml-2">{calculateTotal().toFixed(2)}€</span>
+                                    </div>
+                                    <button
+                                        onClick={handlePayment}
+                                        className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                                        disabled={scannedItems.length === 0}
+                                    >
+                                        <CreditCard size={20} />
+                                        <span>Bezahlen</span>
+                                    </button>
+                                </div>
                             </div>
-                        </div>
                     )}
                 </div>
             </div>
