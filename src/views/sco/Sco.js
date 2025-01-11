@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Trash2, Plus, Minus, CreditCard } from 'lucide-react';
-import { produceService } from '../../api/services/productService';
+import { productService } from '../../api/services/productService';
 import { useApi } from '../../hooks/useApi';
 import { useNavigate } from 'react-router-dom';
 
@@ -115,13 +115,13 @@ const Sco = () => {
         loading,
         error,
         execute: fetchProduceItems
-    } = useApi(produceService.getAllProduce);
+    } = useApi(productService.getAllProduce);
 
     const {
         execute: fetchProductByBarcode,
         loading: barcodeLoading,
         error: barcodeError
-    } = useApi(produceService.getProductByBarcode);
+    } = useApi(productService.getProductByBarcode);
 
     useEffect(() => {
         fetchProduceItems();

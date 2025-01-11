@@ -1,6 +1,6 @@
-// src/api/services/produceService.js
+// src/api/services/productService.js
 
-// Mock data
+// Mock data for fruits and vegetables
 const MOCK_PRODUCE = [
     {
         id: 'p1',
@@ -11,7 +11,7 @@ const MOCK_PRODUCE = [
         plu: '4131',
         isOrganic: false,
         origin: 'Deutschland',
-        imageUrl: 'https://media.istockphoto.com/id/532048136/de/foto/frischen-roten-apfel-isoliert-auf-wei%C3%9F-mit-clipping-path.jpg?s=1024x1024&w=is&k=20&c=kFtuhfrrvyJ1Ver3XJEWj331J4ff8CGrhQAt8PEiBQ0='
+        imageUrl: 'https://media.istockphoto.com/id/532048136/de/foto/frischen-roten-apfel-isoliert-auf-wei%C3%9F-mit-clipping-path.jpg?s=1024x1024&w=is&k=20&c=kFtuhfrrvyJ1Ver3XJEWj331J4ff8CGrhQAt8PEiBQ0=',
     },
     {
         id: 'p2',
@@ -21,7 +21,7 @@ const MOCK_PRODUCE = [
         category: 'fruit',
         plu: '94011',
         isOrganic: true,
-        origin: 'Ecuador',
+        origin: 'Ecuador'
     },
     {
         id: 'p3',
@@ -31,7 +31,7 @@ const MOCK_PRODUCE = [
         category: 'vegetable',
         plu: '4562',
         isOrganic: false,
-        origin: 'Deutschland',
+        origin: 'Deutschland'
     },
     {
         id: 'p4',
@@ -41,7 +41,7 @@ const MOCK_PRODUCE = [
         category: 'vegetable',
         plu: '93061',
         isOrganic: true,
-        origin: 'Spanien',
+        origin: 'Spanien'
     },
     {
         id: 'p5',
@@ -51,7 +51,7 @@ const MOCK_PRODUCE = [
         category: 'fruit',
         plu: '4409',
         isOrganic: false,
-        origin: 'Italien',
+        origin: 'Italien'
     },
     {
         id: 'p6',
@@ -61,7 +61,7 @@ const MOCK_PRODUCE = [
         category: 'vegetable',
         plu: '4072',
         isOrganic: false,
-        origin: 'Deutschland',
+        origin: 'Deutschland'
     },
     {
         id: 'p7',
@@ -71,7 +71,7 @@ const MOCK_PRODUCE = [
         category: 'vegetable',
         plu: '94082',
         isOrganic: true,
-        origin: 'Deutschland',
+        origin: 'Deutschland'
     },
     {
         id: 'p8',
@@ -81,18 +81,20 @@ const MOCK_PRODUCE = [
         category: 'fruit',
         plu: '4012',
         isOrganic: false,
-        origin: 'Spanien',
+        origin: 'Spanien'
     }
 ];
 
-const MOCK_BARCODE_PRODUCTS = [
+// Mock data for barcode products
+const MOCK_PRODUCTS = [
     {
         id: 'b1',
         name: 'Kaffe Sahne',
         price: 1.99,
         unit: 'stk',
         barcode: '4008230208001',
-        imageUrl: 'https://www.saliter.de/wp-content/uploads/2021/08/Alpen_Kaffeesahne_250ml_753x1000.png'
+        imageUrl: 'https://www.saliter.de/wp-content/uploads/2021/08/Alpen_Kaffeesahne_250ml_753x1000.png',
+        pledgeAmount: 0 // No deposit
     },
     {
         id: 'b2',
@@ -100,84 +102,58 @@ const MOCK_BARCODE_PRODUCTS = [
         price: 1.99,
         unit: 'stk',
         barcode: '4062139002191',
-        imageUrl: 'https://ip.prod.freshop.retail.ncrcloud.com/resize?url=https://images.freshop.ncrcloud.com/00012000001291/a9c31233160adbad246facc8695b9dcf_large.png&width=512&type=webp&quality=90'
-    },
+        imageUrl: 'https://ip.prod.freshop.retail.ncrcloud.com/resize?url=https://images.freshop.ncrcloud.com/00012000001291/a9c31233160adbad246facc8695b9dcf_large.png&width=512&type=webp&quality=90',
+        pledgeAmount: 0.25 // 25 cents deposit
+    }
 ];
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// ProduceService
-export const produceService = {
-    getProductByBarcode: async (barcode) => {
-        await delay(300); // Simulierte Verzögerung
-        const product = MOCK_BARCODE_PRODUCTS.filter(item => item.barcode === barcode)[0];
-        if (!product) {
-            throw new Error(`Produkt mit Barcode ${barcode} nicht gefunden`);
-        }
-        return product;
-    },
-
-    // Alle Produkte abrufen
+export const productService = {
+    // Produce functions
     getAllProduce: async () => {
-        await delay(800); // Simuliere Netzwerkverzögerung
+        await delay(800);
         return MOCK_PRODUCE;
     },
 
-    // Produkt nach ID suchen
-    getProduceById: async (id) => {
+    // Product functions
+    getAllProducts: async () => {
+        await delay(800);
+        return MOCK_PRODUCTS;
+    },
+
+    getProductById: async (id) => {
         await delay(300);
-        const product = MOCK_PRODUCE.find(item => item.id === id);
+        const product = MOCK_PRODUCTS.find(item => item.id === id);
         if (!product) {
-            throw new Error('Produkt nicht gefunden');
+            throw new ProductError('Produkt nicht gefunden');
         }
         return product;
     },
 
-    // Produkte nach Kategorie filtern
-    getProduceByCategory: async (category) => {
-        await delay(500);
-        return MOCK_PRODUCE.filter(item => item.category === category);
-    },
-
-    // Produkt nach PLU-Code suchen
-    getProduceByPLU: async (plu) => {
+    getProductByBarcode: async (barcode) => {
         await delay(300);
-        const product = MOCK_PRODUCE.find(item => item.plu === plu);
+        const product = MOCK_PRODUCTS.find(item => item.barcode === barcode);
         if (!product) {
-            throw new Error('PLU nicht gefunden');
+            throw new ProductError(`Produkt mit Barcode ${barcode} nicht gefunden`);
         }
         return product;
     },
 
-    // Bio-Produkte filtern
-    getOrganicProduce: async () => {
+    searchProducts: async (query) => {
         await delay(500);
-        return MOCK_PRODUCE.filter(item => item.isOrganic);
-    },
-
-    // Preis für ein gewogenes Produkt berechnen
-    calculateWeightPrice: async (plu, weight) => {
-        const product = await produceService.getProduceByPLU(plu);
-        return {
-            product,
-            weight,
-            totalPrice: (product.price * weight).toFixed(2)
-        };
+        const searchTerm = query.toLowerCase();
+        return MOCK_PRODUCTS.filter(product =>
+            product.name.toLowerCase().includes(searchTerm) ||
+            product.barcode.includes(searchTerm)
+        );
     }
 };
 
-// Optional: Error-Klassen für spezifische Fehlerbehandlung
-export class ProduceError extends Error {
+// Error class
+export class ProductError extends Error {
     constructor(message) {
         super(message);
-        this.name = 'ProduceError';
-    }
-}
-
-export class PLUNotFoundError extends ProduceError {
-    constructor(plu) {
-        super(`PLU ${plu} wurde nicht gefunden`);
-        this.name = 'PLUNotFoundError';
-        this.plu = plu;
+        this.name = 'ProductError';
     }
 }
