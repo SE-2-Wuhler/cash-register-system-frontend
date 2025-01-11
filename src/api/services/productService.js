@@ -10,7 +10,8 @@ const MOCK_PRODUCE = [
         category: 'fruit',
         plu: '4131',
         isOrganic: false,
-        origin: 'Deutschland'
+        origin: 'Deutschland',
+        imageUrl: 'https://media.istockphoto.com/id/532048136/de/foto/frischen-roten-apfel-isoliert-auf-wei%C3%9F-mit-clipping-path.jpg?s=1024x1024&w=is&k=20&c=kFtuhfrrvyJ1Ver3XJEWj331J4ff8CGrhQAt8PEiBQ0='
     },
     {
         id: 'p2',
@@ -20,7 +21,7 @@ const MOCK_PRODUCE = [
         category: 'fruit',
         plu: '94011',
         isOrganic: true,
-        origin: 'Ecuador'
+        origin: 'Ecuador',
     },
     {
         id: 'p3',
@@ -30,7 +31,7 @@ const MOCK_PRODUCE = [
         category: 'vegetable',
         plu: '4562',
         isOrganic: false,
-        origin: 'Deutschland'
+        origin: 'Deutschland',
     },
     {
         id: 'p4',
@@ -40,7 +41,7 @@ const MOCK_PRODUCE = [
         category: 'vegetable',
         plu: '93061',
         isOrganic: true,
-        origin: 'Spanien'
+        origin: 'Spanien',
     },
     {
         id: 'p5',
@@ -50,7 +51,7 @@ const MOCK_PRODUCE = [
         category: 'fruit',
         plu: '4409',
         isOrganic: false,
-        origin: 'Italien'
+        origin: 'Italien',
     },
     {
         id: 'p6',
@@ -60,7 +61,7 @@ const MOCK_PRODUCE = [
         category: 'vegetable',
         plu: '4072',
         isOrganic: false,
-        origin: 'Deutschland'
+        origin: 'Deutschland',
     },
     {
         id: 'p7',
@@ -70,7 +71,7 @@ const MOCK_PRODUCE = [
         category: 'vegetable',
         plu: '94082',
         isOrganic: true,
-        origin: 'Deutschland'
+        origin: 'Deutschland',
     },
     {
         id: 'p8',
@@ -80,15 +81,42 @@ const MOCK_PRODUCE = [
         category: 'fruit',
         plu: '4012',
         isOrganic: false,
-        origin: 'Spanien'
+        origin: 'Spanien',
     }
 ];
 
-// Hilfsfunktion für simulierte API-Verzögerung
+const MOCK_BARCODE_PRODUCTS = [
+    {
+        id: 'b1',
+        name: 'Kaffe Sahne',
+        price: 1.99,
+        unit: 'stk',
+        barcode: '4008230208001',
+        imageUrl: 'https://www.saliter.de/wp-content/uploads/2021/08/Alpen_Kaffeesahne_250ml_753x1000.png'
+    },
+    {
+        id: 'b2',
+        name: 'Pepsi Cola',
+        price: 1.99,
+        unit: 'stk',
+        barcode: '4062139002191',
+        imageUrl: 'https://ip.prod.freshop.retail.ncrcloud.com/resize?url=https://images.freshop.ncrcloud.com/00012000001291/a9c31233160adbad246facc8695b9dcf_large.png&width=512&type=webp&quality=90'
+    },
+];
+
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // ProduceService
 export const produceService = {
+    getProductByBarcode: async (barcode) => {
+        await delay(300); // Simulierte Verzögerung
+        const product = MOCK_BARCODE_PRODUCTS.filter(item => item.barcode === barcode)[0];
+        if (!product) {
+            throw new Error(`Produkt mit Barcode ${barcode} nicht gefunden`);
+        }
+        return product;
+    },
+
     // Alle Produkte abrufen
     getAllProduce: async () => {
         await delay(800); // Simuliere Netzwerkverzögerung
