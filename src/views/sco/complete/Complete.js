@@ -109,7 +109,7 @@ function Complete() {
                 <div className="bg-white rounded-2xl shadow-xl p-16 max-w-lg w-full mx-auto text-center">
                     <h1 className="text-5xl font-bold mb-8 text-green-700 tracking-tight">Vielen Dank!</h1>
                     <p className="text-xl text-gray-700 mb-10 leading-relaxed">
-                        Deine Bestellung wurde erfolgreich bearbeitet.
+                        Die Bezahlung deines Einkaufs war erfolgreich.
                     </p>
                     <div className="mb-8">
                         <button
