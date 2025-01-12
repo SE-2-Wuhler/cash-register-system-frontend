@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { useNavigate } from 'react-router-dom';
+import CancelDialog from '../../../utils/components/CancelDialog';
 
 
 function Pay() {
@@ -11,6 +12,7 @@ function Pay() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [paymentError, setPaymentError] = useState(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   useEffect(() => {
     const fetchPrice = async () => {
@@ -30,8 +32,8 @@ function Pay() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-4 h-screen flex items-center justify-center"> {/* Flexbox für Zentrierung */}
-        <div className="text-center"> {/* Innerer Container für Textzentrierung */}
+      <div className="container mx-auto p-4 h-screen flex items-center justify-center">
+        <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500 mx-auto"></div>
           <p className="mt-2 text-gray-600">Lade Preis...</p>
         </div>
@@ -75,10 +77,27 @@ function Pay() {
     }
     return null;
   };
+
+  const handleCancel = () => {
+    setShowCancelDialog(true);
+  };
+
+  const handleCancelConfirm = () => {
+    setShowCancelDialog(false);
+    navigate('/');
+  }
+
   return (
     <PayPalScriptProvider options={{ "client-id": "AbV-7ICaqhM9Xn21eTHQakdRmE0F5IS83yhLr5QNQBIWvbDZcqPPytIFq3AEPKjh09a3lpmMaQMo2DyW", "currency": "EUR", "disable-funding": "card" }}>
-      <div className="min-h-screen flex items-center justify-center bg-green-50"> {/* Hauptcontainer für vertikale Zentrierung */}
-        <div className="bg-white rounded-2xl shadow-xl p-16 max-w-2xl w-full mx-auto"> {/* Breite angepasst und Margin für horizontale Zentrierung */}
+      <div className="min-h-screen flex items-center justify-center bg-green-50">
+        <CancelDialog
+          isOpen={showCancelDialog}
+          onClose={() => setShowCancelDialog(false)}
+          onConfirm={handleCancelConfirm}
+          message="Möchtest du den aktuellen Vorgang wirklich abbrechen? Alle gescannten Artikel gehen verloren."
+        />
+
+        <div className="bg-white rounded-2xl shadow-xl p-16 max-w-2xl w-full mx-auto">
           <h1 className="text-4xl font-bold mb-8 text-green-700 text-center tracking-tight">Checkout</h1>
 
           <div className="bg-gray-50 rounded-xl p-10 mb-8 shadow-inner">
@@ -92,6 +111,7 @@ function Pay() {
                 color: 'gold',
                 tagline: false,
                 height: 52,
+
                 shape: 'rect',
                 label: 'paypal'
               }}
@@ -128,6 +148,13 @@ function Pay() {
               className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 px-8 rounded w-full mt-6"
             >
               Barzahlung
+            </button>
+
+            <button
+              onClick={handleCancel}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded w-full mt-6"
+            >
+              Abbrechen
             </button>
           </div>
 
