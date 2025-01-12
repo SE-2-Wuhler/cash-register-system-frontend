@@ -1,12 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Trash2, CreditCard, XCircle } from 'lucide-react';
-import { productService } from '../../api/services/productService';
-import { useApi } from '../../hooks/useApi';
+import { AlertCircle, CreditCard, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useApi } from '../../hooks/useApi';
+import { pledgeService } from '../../api/services/pledgeService';
 import CancelDialog from '../../utils/components/CancelDialog';
+
+
 const NotificationBar = ({ notification }) => (
-    <div className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-500 ${notification ? 'translate-y-0' : '-translate-y-full'}`}>
-        <div className={`${notification?.type === 'error' ? 'bg-red-500' : 'bg-blue-500'} text-white p-4 flex items-center justify-center shadow-lg`}>
+    <div
+        className={`
+            fixed top-0 left-0 right-0 z-50 
+            transition-all duration-500 transform
+            ${notification ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}
+        `}
+    >
+        <div
+            className={`
+                text-white p-4 flex items-center justify-center shadow-lg
+                ${notification?.type === 'error' ? 'bg-red-500' : 'bg-blue-500'}
+            `}
+            style={{
+                visibility: notification ? 'visible' : 'hidden'
+            }}
+        >
             <AlertCircle className="mr-2" />
             <span className="text-lg font-semibold">{notification?.text}</span>
         </div>
@@ -16,10 +32,10 @@ const NotificationBar = ({ notification }) => (
 const ScannedBottle = ({ item, quantity }) => (
     <div className="flex items-center justify-between border-b pb-4 mb-4">
         <div className="flex items-center gap-4 flex-1">
-            {item.imageUrl && (
+            {item.imgUrl && (
                 <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
                     <img
-                        src={item.imageUrl}
+                        src={item.imgUrl}
                         alt={item.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -33,7 +49,7 @@ const ScannedBottle = ({ item, quantity }) => (
                     {quantity > 1 ? `${quantity} × ` : ''}{item.name}
                 </div>
                 <div className="text-gray-900 text-lg font-bold">
-                    {(item.pledgeAmount * quantity).toFixed(2)}€
+                    {(item.pledgeValue * quantity).toFixed(2)}€
                 </div>
             </div>
         </div>
@@ -47,14 +63,44 @@ const Pledge = () => {
     const [barcodeBuffer, setBarcodeBuffer] = useState('');
     const [lastKeypressTime, setLastKeypressTime] = useState(0);
     const [showCancelDialog, setShowCancelDialog] = useState(false);
+    const [pledgeProducts, setPledgeProducts] = useState({});
 
     const {
-        execute: fetchProductByBarcode,
-        loading: barcodeLoading,
-        error: barcodeError
-    } = useApi(productService.getProductByBarcode);
+        execute: getAllItemsWithPledge,
+        loading: productsLoading,
+        error: productsError
+    } = useApi(pledgeService.getAllItemsWithPledge);
 
-    // Gruppiere die gescannten Flaschen nach Produkt-ID
+    useEffect(() => {
+        const loadPledgeProducts = async () => {
+            try {
+                const products = await getAllItemsWithPledge();
+                // Create a map of barcode to product for faster lookups
+                const productMap = products.reduce((acc, product) => {
+                    acc[product.barcodeId] = product;
+                    return acc;
+                }, {});
+                setPledgeProducts(productMap);
+            } catch (error) {
+                setNotification({
+                    text: 'Fehler beim Laden der Pfandprodukte',
+                    type: 'error',
+                    timestamp: Date.now()
+                });
+            }
+        };
+
+        console.log('Loading pledge products...');
+        loadPledgeProducts();
+    }, [getAllItemsWithPledge]);
+
+    const {
+        execute: createPledgeApiCall,
+        loading: pledgeLoading,
+        error: pledgeError
+    } = useApi(pledgeService.createPledge);
+
+    // Group scanned bottles by product ID
     const groupedBottles = scannedBottles.reduce((groups, bottle) => {
         const key = bottle.id;
         if (!groups[key]) {
@@ -81,10 +127,10 @@ const Pledge = () => {
             if (/^\d$/.test(event.key)) {
                 setBarcodeBuffer(prev => prev + event.key);
             } else if (event.key === 'Enter' && barcodeBuffer) {
-                try {
-                    const product = await fetchProductByBarcode(barcodeBuffer);
+                const product = pledgeProducts[barcodeBuffer];
 
-                    if (product.pledgeAmount <= 0) {
+                if (product) {
+                    if (product.pledgeValue <= 0) {
                         setNotification({
                             text: 'Dieses Produkt hat kein Pfand',
                             type: 'error',
@@ -93,7 +139,7 @@ const Pledge = () => {
                     } else {
                         handleScan(product);
                     }
-                } catch (error) {
+                } else {
                     setNotification({
                         text: 'Produkt nicht gefunden',
                         type: 'error',
@@ -106,12 +152,12 @@ const Pledge = () => {
 
         window.addEventListener('keypress', handleKeyPress);
         return () => window.removeEventListener('keypress', handleKeyPress);
-    }, [barcodeBuffer, lastKeypressTime, fetchProductByBarcode]);
+    }, [barcodeBuffer, lastKeypressTime, pledgeProducts]);
 
     const handleScan = (product) => {
         setScannedBottles(prev => [...prev, { ...product, scanId: Date.now() }]);
 
-        // Zähle die aktuelle Anzahl dieses Produkts
+        // Count current quantity of this product
         const currentCount = scannedBottles.filter(b => b.id === product.id).length + 1;
 
         setNotification({
@@ -122,11 +168,33 @@ const Pledge = () => {
     };
 
     const calculateTotal = () => {
-        return scannedBottles.reduce((sum, item) => sum + item.pledgeAmount, 0);
+        return scannedBottles.reduce((sum, item) => sum + item.pledgeValue, 0);
     };
 
-    const handlePrint = () => {
-        navigate('/pledge/receipt', { state: { bottles: scannedBottles } });
+    const handleCreatePledge = async () => {
+        const itemsWithQuantity = Object.values(groupedBottles).map(({ item, quantity }) => ({
+            itemId: item.id,
+            quantity,
+        }
+
+        ));
+
+        try {
+            await createPledgeApiCall(itemsWithQuantity);
+            setNotification({
+                text: 'Pfand-Bon wird gedruckt.',
+                type: 'success',
+                timestamp: Date.now(),
+            });
+            setScannedBottles([]);
+            navigate('/');
+        } catch (error) {
+            setNotification({
+                text: pledgeError || 'Fehler beim Erstellen des Pfand-Bons.',
+                type: 'error',
+                timestamp: Date.now(),
+            });
+        }
     };
 
     useEffect(() => {
@@ -149,6 +217,17 @@ const Pledge = () => {
         setScannedBottles([]);
         setShowCancelDialog(false);
         navigate('/');
+    };
+
+    if (productsLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-blue-50">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Lade Pfandprodukte...</p>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -158,24 +237,22 @@ const Pledge = () => {
             <CancelDialog
                 isOpen={showCancelDialog}
                 onClose={() => setShowCancelDialog(false)}
-                onConfirm={() => handleCancelConfirm()}
-                message={`Möchten Sie den Vorgang wirklich abbrechen? Alle gescannten Flaschen werden gelöscht.`}
+                onConfirm={handleCancelConfirm}
+                message="Möchten Sie den Vorgang wirklich abbrechen? Alle gescannten Flaschen werden gelöscht."
             />
 
-            {barcodeLoading && (
-                <div className="fixed top-4 right-4 bg-yellow-100 p-2 rounded">
-                    Scanning...
+            {pledgeLoading && (
+                <div className="fixed top-4 right-4 bg-blue-100 p-2 rounded">
+                    Erstelle Pfand-Bon...
                 </div>
             )}
 
             <div className="max-w-2xl rounded-lg mx-auto mt-16">
                 <div className="bg-white rounded-lg p-1 shadow-lg flex flex-col h-[calc(100vh-8rem)]">
-                    {/* Header */}
                     <div className="p-6 border-b">
                         <h2 className="text-2xl font-bold">Pfandrückgabe</h2>
                     </div>
 
-                    {/* Scrollable content */}
                     <div className="flex-1 overflow-y-auto p-6">
                         {scannedBottles.length === 0 ? (
                             <div className="text-gray-500 text-center py-8 text-xl">
@@ -194,7 +271,6 @@ const Pledge = () => {
                         )}
                     </div>
 
-                    {/* Fixed footer with total and print button */}
                     <div className="border-t p-6 bg-white">
                         <div className="flex justify-between items-center">
                             <div className="font-bold text-2xl">
@@ -202,14 +278,14 @@ const Pledge = () => {
                                 <span className="ml-3">{calculateTotal().toFixed(2)}€</span>
                             </div>
                             <button
-                                onClick={() => handleCancel()}
+                                onClick={handleCancel}
                                 className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg flex items-center space-x-3 transition-colors text-lg"
                             >
                                 <XCircle size={24} />
                                 <span>Abbrechen</span>
                             </button>
                             <button
-                                onClick={handlePrint}
+                                onClick={handleCreatePledge}
                                 className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg flex items-center space-x-3 transition-colors text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                 disabled={scannedBottles.length === 0}
                             >

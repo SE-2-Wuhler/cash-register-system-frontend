@@ -5,6 +5,7 @@ const handleResponse = async (response) => {
         const error = await response.json().catch(() => ({}));
         throw new Error(error.message || `HTTP error! status: ${response.status}`);
     }
+    console.log('Response:', response);
     return response.json();
 };
 
@@ -19,6 +20,7 @@ const createApiClient = (baseURL) => {
                 signal: controller.signal,
                 headers: {
                     'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
                     ...options.headers,
                 },
             });

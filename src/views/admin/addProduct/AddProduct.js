@@ -17,12 +17,21 @@ const AddProduct = () => {
     const [barcodeBuffer, setBarcodeBuffer] = useState('');
     const [lastKeypressTime, setLastKeypressTime] = useState(0);
     const [lastScannedProduct, setLastScannedProduct] = useState(null);
+    const [price, setPrice] = useState('');
 
     const {
         execute: addProduct,
         loading,
         error
     } = useApi(productService.addProduct);
+
+    const handlePriceChange = (event) => {
+        const value = event.target.value;
+        // Allow only numbers and one decimal point
+        if (/^\d*\.?\d*$/.test(value)) {
+            setPrice(value);
+        }
+    };
 
     useEffect(() => {
         const handleKeyPress = async (event) => {
@@ -39,14 +48,28 @@ const AddProduct = () => {
             if (/^\d$/.test(event.key)) {
                 setBarcodeBuffer(prev => prev + event.key);
             } else if (event.key === 'Enter' && barcodeBuffer) {
+                if (!price) {
+                    setNotification({
+                        text: 'Bitte geben Sie einen Preis ein',
+                        type: 'error',
+                        timestamp: Date.now()
+                    });
+                    return;
+                }
+
                 try {
-                    const result = await addProduct(barcodeBuffer);
+                    const result = await addProduct({
+                        barcode: barcodeBuffer,
+                        price: parseFloat(price)
+                    });
                     setLastScannedProduct(result);
                     setNotification({
                         text: `Produkt ${result.name} wurde erfolgreich hinzugefügt`,
                         type: 'success',
                         timestamp: Date.now()
                     });
+                    // Reset price after successful addition
+                    setPrice('');
                 } catch (error) {
                     setNotification({
                         text: error.message || 'Fehler beim Hinzufügen des Produkts',
@@ -60,7 +83,7 @@ const AddProduct = () => {
 
         window.addEventListener('keypress', handleKeyPress);
         return () => window.removeEventListener('keypress', handleKeyPress);
-    }, [barcodeBuffer, lastKeypressTime, addProduct]);
+    }, [barcodeBuffer, lastKeypressTime, addProduct, price]);
 
     useEffect(() => {
         if (notification) {
@@ -79,8 +102,23 @@ const AddProduct = () => {
                     <div className="mb-8">
                         <h1 className="text-2xl font-bold mb-2">Produkt hinzufügen</h1>
                         <p className="text-gray-600">
-                            Scannen Sie den Barcode eines neuen Produkts, um es zur Datenbank hinzuzufügen.
+                            Geben Sie den Preis ein und scannen Sie den Barcode eines neuen Produkts.
                         </p>
+                    </div>
+
+                    {/* Price Input */}
+                    <div className="mb-6">
+                        <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
+                            Preis (€)
+                        </label>
+                        <input
+                            type="text"
+                            id="price"
+                            value={price}
+                            onChange={handlePriceChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="0.00"
+                        />
                     </div>
 
                     {/* Scanning Status */}
@@ -105,7 +143,13 @@ const AddProduct = () => {
                             <div className="bg-gray-50 p-4 rounded-lg">
                                 <div className="font-medium">{lastScannedProduct.name}</div>
                                 <div className="text-gray-600 text-sm mt-1">
-                                    Barcode: {lastScannedProduct.barcode}
+                                    Name: {lastScannedProduct.name}
+                                </div>
+                                <div className="text-gray-600 text-sm mt-1">
+                                    Barcode: {lastScannedProduct.barcodeId}
+                                </div>
+                                <div className="text-gray-600 text-sm mt-1">
+                                    Preis: {lastScannedProduct.price.toFixed(2)}€
                                 </div>
                                 {lastScannedProduct.pledgeAmount > 0 && (
                                     <div className="text-green-600 font-medium mt-1">

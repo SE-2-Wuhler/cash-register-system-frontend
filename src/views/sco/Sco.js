@@ -1,31 +1,89 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Trash2, Plus, Minus, CreditCard, XCircle } from 'lucide-react';
 import { productService } from '../../api/services/productService';
 import { useApi } from '../../hooks/useApi';
-import { useNavigate } from 'react-router-dom';
-import CancelDialog from '../../utils/components/CancelDialog';
+import { transactionService } from '../../api/services/transactionService';
 
+// --------------
+// 1. SUB-COMPONENTS
+// --------------
 
-// Previous component definitions remain the same
+/**
+ * CancelDialog
+ */
+const CancelDialog = ({ isOpen, onClose, onConfirm, message }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+                <p className="text-gray-800 text-lg mb-6">{message}</p>
+                <div className="flex justify-end space-x-3">
+                    <button
+                        onClick={onClose}
+                        className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded"
+                    >
+                        Abbrechen
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
+                    >
+                        Vorgang beenden
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+/**
+ * NotificationBar
+ */
 const NotificationBar = ({ notification }) => (
-    <div className={`fixed top-0 left-0 right-0 transition-transform duration-500 ${notification ? 'translate-y-0' : '-translate-y-full'}`}>
-        <div className="bg-green-500 text-white p-4 flex items-center justify-center shadow-lg">
+    <div
+        className={`
+            fixed top-0 left-0 right-0 z-50 
+            transition-all duration-500 ease-in-out
+            ${notification ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}
+        `}
+    >
+        <div
+            className={`
+                text-white p-4 flex items-center justify-center shadow-lg
+                transition-colors duration-300
+                ${notification?.type === 'error' ? 'bg-red-500' : 'bg-green-500'}
+            `}
+        >
             <AlertCircle className="mr-2" />
             <span className="text-lg font-semibold">{notification?.text}</span>
         </div>
     </div>
 );
 
+/**
+ * ProductButton
+ * 
+ * (Optional) We prevent Enter/Space from triggering the button via onKeyDown.
+ */
 const ProductButton = ({ item, onScan }) => (
     <button
+        type="button"
         onClick={() => onScan(item)}
-        className="bg-green-100 hover:bg-green-200 p-3 rounded-lg text-center transition-colors w-full flex items-center gap-3"
+        onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+            }
+        }}
+        className="bg-green-100 hover:bg-green-200 p-3 rounded-lg text-center transition-colors w-full flex items-center gap-3 focus:outline-none"
+        tabIndex="-1"
     >
         {/* Image container - only shown if there's a valid image URL */}
-        {item.imageUrl && (
+        {item.imgUrl && (
             <div className="w-12 h-12 flex-shrink-0">
                 <img
-                    src={item.imageUrl}
+                    src={item.imgUrl}
                     alt={item.name}
                     className="w-full h-full object-cover rounded-md"
                     onError={(e) => {
@@ -41,69 +99,97 @@ const ProductButton = ({ item, onScan }) => (
             <div className="font-medium text-base mb-0.5">{item.name}</div>
             <div className="text-gray-600 text-sm">
                 {item.price.toFixed(2)}€/{item.unit}
-                {item.isOrganic && (
-                    <span className="text-green-600 ml-2">Bio</span>
-                )}
+                {item.isOrganic && <span className="text-green-600 ml-2">Bio</span>}
             </div>
         </div>
     </button>
 );
 
-// Updated CartItem with image
-const CartItem = ({ item, onUpdateQuantity, onRemove }) => (
-    <div className="flex items-center justify-between border-b pb-4 mb-4">
-        <div className="flex items-center gap-4 flex-1">
-            {/* Image container - only shown if there's a valid image URL */}
-            {item.imageUrl && (
-                <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
-                    <img
-                        src={item.imageUrl}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                            // Remove the image container if loading fails
-                            e.target.parentElement.style.display = 'none';
-                        }}
-                    />
-                </div>
-            )}
+/**
+ * CartItem
+ * 
+ * Also prevents Enter/Space via onKeyDown.
+ */
+const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
+    const handleButtonClick = (change) => {
+        onUpdateQuantity(item.id, change);
+        document.activeElement.blur();
+    };
 
-            <div className="flex-1">
-                <div className="font-semibold text-xl">{item.name}</div>
-                <div className="text-gray-600 text-lg">
-                    {item.price}€ {item.isOrganic && <span className="text-green-600 ml-2">Bio</span>}
+    return (
+        <div className="flex items-center justify-between border-b pb-4 mb-4">
+            <div className="flex items-center gap-4 flex-1">
+                {!item.isPledge && item.imgUrl && (
+                    <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                        <img
+                            src={item.imgUrl}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                                e.target.parentElement.style.display = 'none';
+                            }}
+                        />
+                    </div>
+                )}
+                <div className="flex-1">
+                    <div className="font-semibold text-xl">
+                        {item.name}
+                        {item.isPledge && <span className="text-green-600 ml-2">(Pfand)</span>}
+                    </div>
+                    <div className="text-gray-600 text-lg">
+                        {item.price.toFixed(2)}€
+                        {!item.isPledge && item.isOrganic &&
+                            <span className="text-green-600 ml-2">Bio</span>
+                        }
+                    </div>
                 </div>
             </div>
-        </div>
-        <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-6">
+                {!item.isPledge && (
+                    <div className="flex items-center space-x-3">
+                        <button
+                            onClick={() => handleButtonClick(-1)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+                            }}
+                            className="p-2 hover:bg-gray-100 rounded"
+                        >
+                            <Minus size={24} />
+                        </button>
+                        <span className="w-10 text-center text-xl">{item.quantity}</span>
+                        <button
+                            onClick={() => handleButtonClick(1)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+                            }}
+                            className="p-2 hover:bg-gray-100 rounded"
+                        >
+                            <Plus size={24} />
+                        </button>
+                    </div>
+                )}
                 <button
-                    onClick={() => onUpdateQuantity(item.id, -1)}
-                    className="p-2 hover:bg-gray-100 rounded"
+                    onClick={() => {
+                        onRemove(item.id);
+                        document.activeElement.blur();
+                    }}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+                    }}
+                    className="text-red-500 hover:text-red-700 p-2"
                 >
-                    <Minus size={24} />
-                </button>
-                <span className="w-10 text-center text-xl">{item.quantity}</span>
-                <button
-                    onClick={() => onUpdateQuantity(item.id, 1)}
-                    className="p-2 hover:bg-gray-100 rounded"
-                >
-                    <Plus size={24} />
+                    <Trash2 size={24} />
                 </button>
             </div>
-            <button
-                onClick={() => onRemove(item.id)}
-                className="text-red-500 hover:text-red-700 p-2"
-            >
-                <Trash2 size={24} />
-            </button>
         </div>
-    </div>
-);
-
-
+    );
+};
+// --------------
+// 2. MAIN SCO COMPONENT
+// --------------
 const Sco = () => {
     const navigate = useNavigate();
+
     const [scannedItems, setScannedItems] = useState([]);
     const [notification, setNotification] = useState(null);
     const [produceItems, setProduceItems] = useState([]);
@@ -116,7 +202,7 @@ const Sco = () => {
         loading,
         error,
         execute: fetchProduceItems
-    } = useApi(productService.getAllProduce);
+    } = useApi(productService.getNonScanableItems);  // Changed from getAllProduce to getNonScanableItems
 
     const {
         execute: fetchProductByBarcode,
@@ -124,48 +210,55 @@ const Sco = () => {
         error: barcodeError
     } = useApi(productService.getProductByBarcode);
 
+    // Notification helper
+    const showNotification = (message, type = 'success') => {
+        if (window.notificationTimeout) {
+            clearTimeout(window.notificationTimeout);
+        }
+        setNotification({
+            text: message,
+            type,
+            timestamp: Date.now()
+        });
+        window.notificationTimeout = setTimeout(() => {
+            setNotification(null);
+        }, 2500);
+    };
+
+    // Fetch produce items on mount
     useEffect(() => {
         fetchProduceItems();
     }, [fetchProduceItems]);
 
+    // Set produce items once available
     useEffect(() => {
         if (items) {
             setProduceItems(items);
         }
     }, [items]);
 
+    // Barcode scanning effect
     useEffect(() => {
         const handleKeyPress = async (event) => {
             const currentTime = Date.now();
 
-            // If the time between keystrokes is > 100ms, reset the buffer
-            // This helps distinguish between regular keyboard input and barcode scanner
             if (currentTime - lastKeypressTime > 100) {
                 setBarcodeBuffer('');
             }
-
             setLastKeypressTime(currentTime);
 
-            // Only accept numeric input and Enter key
             if (/^\d$/.test(event.key)) {
-                setBarcodeBuffer(prev => prev + event.key);
+                setBarcodeBuffer((prev) => prev + event.key);
             } else if (event.key === 'Enter' && barcodeBuffer) {
-                // When Enter is pressed and we have a barcode, process it
                 try {
                     const product = await fetchProductByBarcode(barcodeBuffer);
                     if (product) {
                         handleScan(product);
                     } else {
-                        setNotification({
-                            text: `Produkt mit Barcode ${barcodeBuffer} nicht gefunden`,
-                            timestamp: Date.now()
-                        });
+                        showNotification(`Produkt mit Barcode ${barcodeBuffer} nicht gefunden`, 'error');
                     }
                 } catch (error) {
-                    setNotification({
-                        text: 'Fehler beim Scannen des Produkts',
-                        timestamp: Date.now()
-                    });
+                    showNotification('Fehler beim Scannen des Produkts', 'error');
                 }
                 setBarcodeBuffer('');
             }
@@ -175,57 +268,74 @@ const Sco = () => {
         return () => window.removeEventListener('keypress', handleKeyPress);
     }, [barcodeBuffer, lastKeypressTime, fetchProductByBarcode]);
 
+    // Handle scanning
     const handleScan = (item) => {
-        // Check if the item already exists in scannedItems
-        const existingItemIndex = scannedItems.findIndex(
-            scanItem => scanItem.name === item.name
-        );
+        if (item.pledge) {
+            const pledgeAlreadyScanned = scannedItems.some(
+                scanItem => scanItem.isPledge && scanItem.id === item.id  // Compare by actual ID
+            );
 
-        if (existingItemIndex !== -1) {
-            // If item exists, update its quantity
-            setScannedItems(prev => prev.map((scanItem, index) =>
-                index === existingItemIndex
-                    ? { ...scanItem, quantity: scanItem.quantity + 1 }
-                    : scanItem
-            ));
-        } else {
-        // If item doesn't exist, add it as new
+            if (pledgeAlreadyScanned) {
+                showNotification('Dieser Pfandbon wurde bereits gescannt', 'error');
+                return;
+            }
+
             const newItem = {
-                ...item,
-                id: Date.now(),
+                id: item.id,  // Use the actual UUID instead of barcodeId
+                name: 'Pfand Rückgabe',
+                price: -item.value,
                 quantity: 1,
+                isPledge: true,
+                barcodeId: item.barcodeId  // Keep barcodeId for reference if needed
             };
             setScannedItems(prev => [...prev, newItem]);
-        }
-        showNotification(item.name);
-    };
+            showNotification(`Pfand (${item.value.toFixed(2)}€) wurde abgezogen`);
+        } else {
+            const existingItemIndex = scannedItems.findIndex(
+                (scanItem) => scanItem.id === item.id  // Compare by id instead of name
+            );
 
-    const showNotification = (itemName) => {
-        setNotification({
-            text: `${itemName} wurde hinzugefügt`,
-            timestamp: Date.now()
-        });
-        setTimeout(() => setNotification(null), 3000);
+            if (existingItemIndex !== -1) {
+                setScannedItems((prev) =>
+                    prev.map((scanItem, idx) =>
+                        idx === existingItemIndex
+                            ? { ...scanItem, quantity: scanItem.quantity + 1 }
+                            : scanItem
+                    )
+                );
+            } else {
+                const newItem = {
+                    ...item,
+                    quantity: 1
+                };
+                setScannedItems((prev) => [...prev, newItem]);
+            }
+            showNotification(`${item.name} wurde hinzugefügt`);
+        }
     };
 
     const updateQuantity = (id, change) => {
-        setScannedItems(prev => prev.map(item =>
-            item.id === id
-                ? { ...item, quantity: Math.max(0, item.quantity + change) }
-                : item
-        ).filter(item => item.quantity > 0));
+        setScannedItems((prev) =>
+            prev
+                .map((item) =>
+                    item.id === id
+                        ? { ...item, quantity: Math.max(0, item.quantity + change) }
+                        : item
+            )
+                .filter((item) => item.quantity > 0)
+        );
     };
 
     const removeItem = (id) => {
-        setScannedItems(prev => prev.filter(item => item.id !== id));
+        setScannedItems((prev) => prev.filter((item) => item.id !== id));
     };
-
     const groupedItems = produceItems.reduce((groups, item) => {
-        const key = item.category;
-        if (!groups[key]) {
-            groups[key] = [];
+        // Split categories string and take the first category
+        const category = item.category?.split(',')[0]?.trim() || 'Other';
+        if (!groups[category]) {
+            groups[category] = [];
         }
-        groups[key].push(item);
+        groups[category].push(item);
         return groups;
     }, {});
 
@@ -242,16 +352,44 @@ const Sco = () => {
         setScannedItems([]);
         setShowCancelDialog(false);
         navigate('/');
-    }
-
-    const calculateTotal = () => {
-        return scannedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     };
 
-    const handlePayment = () => {
-        navigate('/sco/pay', { bookingId: '1' });
-    };
+    const calculateTotal = () =>
+        scannedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
+    const handlePayment = async () => {
+        try {
+            console.log('Creating transaction with items:', scannedItems);
+            const items = scannedItems
+                .filter(item => !item.isPledge)
+                .map(item => ({
+                    itemId: item.id,
+                    quantity: item.quantity
+                }));
+
+            // Use actual IDs for pledges
+            const pledges = scannedItems
+                .filter(item => item.isPledge)
+                .map(item => item.id);  // Use ID instead of barcodeId
+
+            const response = await transactionService.createTransaction(items, pledges);
+
+            if (response) {
+                showNotification('Transaktion erfolgreich erstellt');
+                navigate('/sco/pay', {
+                    state: {
+                        transactionId: response,
+                    }
+                });
+            }
+        } catch (error) {
+            showNotification('Fehler beim Erstellen der Transaktion', 'error');
+            console.error('Transaction error:', error);
+        }
+    };
+    // --------------
+    // 3. RENDER
+    // --------------
     return (
         <div className="h-screen p-4 bg-green-50">
             <NotificationBar notification={notification} />
@@ -285,7 +423,7 @@ const Sco = () => {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {scannedItems.map(item => (
+                                    {scannedItems.map((item) => (
                                     <CartItem
                                         key={item.id}
                                         item={item}
@@ -305,12 +443,12 @@ const Sco = () => {
                                 <span className="ml-3">{calculateTotal().toFixed(2)}€</span>
                             </div>
                             <div className="flex gap-3">
-                                    <button
+                                <button
                                     onClick={handleCancel}
-                                        className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg flex items-center space-x-3 transition-colors text-lg"
-                                    >
-                                        <XCircle size={24} />
-                                        <span>Abbrechen</span>
+                                    className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg flex items-center space-x-3 transition-colors text-lg"
+                                >
+                                    <XCircle size={24} />
+                                    <span>Abbrechen</span>
                                 </button>
                                 <button
                                     onClick={handlePayment}
@@ -325,9 +463,9 @@ const Sco = () => {
                     </div>
                 </div>
 
-                {/* Right side bleibt gleich... */}
+                {/* Right side - Produce items */}
                 <div className="w-1/2 bg-white rounded-lg shadow p-4 overflow-y-auto">
-                    <h2 className="text-lg font-bold mb-4">Obst & Gemüse</h2>
+                    <h2 className="text-lg font-bold mb-4">Produkte</h2>
                     {loading ? (
                         <div className="text-center py-6">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
@@ -345,13 +483,17 @@ const Sco = () => {
                         </div>
                     ) : (
                         Object.entries(groupedItems).map(([category, items]) => (
-                            <div key={category} className="mb-4">
+                            <div key={category} className="mb-6">
                                 <h3 className="text-sm font-semibold mb-2 capitalize">
-                                    {category === 'fruit' ? 'Obst' : 'Gemüse'}
+                                    {category}
                                 </h3>
                                 <div className="grid grid-cols-3 gap-2 auto-rows-fr">
-                                    {items.map(item => (
-                                        <ProductButton key={item.id} item={item} onScan={handleScan} />
+                                    {items.map((item) => (
+                                        <ProductButton
+                                            key={item.id}
+                                            item={item}
+                                            onScan={handleScan}
+                                        />
                                     ))}
                                 </div>
                             </div>

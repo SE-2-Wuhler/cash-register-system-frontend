@@ -1,5 +1,7 @@
 // src/api/services/productService.js
 
+import { apiClient } from "../client";
+
 // Mock data for fruits and vegetables
 let MOCK_PRODUCE = [
     {
@@ -110,12 +112,22 @@ const MOCK_PRODUCTS = [
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const productService = {
-    // Produce functions
-    getAllProduce: async () => {
-        await delay(800);
-        return MOCK_PRODUCE;
-    },
+    getNonScanableItems: async () => {
+        try {
+            console.log('Fetching non-scanable items');
+            const response = await apiClient.get('/item/notscanables');
+            console.log('Non-scanable items fetched:', response);
 
+            if (!response) {
+                throw new ProductError('Keine nicht-scanbaren Produkte gefunden');
+            }
+
+            return response;
+        } catch (error) {
+            console.error('Error fetching non-scanable items:', error);
+            throw new ProductError(error.message || 'Fehler beim Abrufen der nicht-scanbaren Produkte');
+        }
+    },
     // Product functions
     getAllProducts: async () => {
         await delay(800);
@@ -123,22 +135,46 @@ export const productService = {
     },
 
     getProductById: async (id) => {
-        await delay(300);
-        const product = MOCK_PRODUCTS.find(item => item.id === id);
-        if (!product) {
-            throw new ProductError('Produkt nicht gefunden');
+        if (typeof id !== 'string') {
+            throw new ProductError('Ungültige Produkt-ID');
         }
-        return product;
+
+        const payload = {
+            value: id,
+        };
+
+        try {
+            console.log('Fetching product with id:', id);
+            const response = await apiClient.post('/product/get', payload);
+            console.log('Product fetched:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching product:', error.message);
+            throw error;
+        }
     },
 
     getProductByBarcode: async (barcode) => {
-        await delay(300);
-        const product = MOCK_PRODUCTS.find(item => item.barcode === barcode);
-        if (!product) {
-            throw new ProductError(`Produkt mit Barcode ${barcode} nicht gefunden`);
+        if (!barcode || typeof barcode !== 'string') {
+            throw new ProductError('Barcode ist erforderlich und muss eine Zeichenkette sein');
         }
-        return product;
+
+        try {
+            console.log('Fetching product with barcode:', barcode);
+            const response = await apiClient.get(`/item/${barcode}`);
+            console.log('Product fetched:', response);
+
+            if (!response) {
+                throw new ProductError(`Produkt mit Barcode ${barcode} nicht gefunden`);
+            }
+
+            return response;
+        } catch (error) {
+            console.error('Error fetching product:', error);
+            throw new ProductError(error.message || `Fehler beim Abrufen des Produkts mit Barcode ${barcode}`);
+        }
     },
+
 
     searchProducts: async (query) => {
         await delay(500);
@@ -149,11 +185,29 @@ export const productService = {
         );
     },
 
-    addProduct: async (productBarcode) => {
-        await delay(800);
-        const newProduct = { id: `b${MOCK_PRODUCTS.length + 1}`, barcode: productBarcode, name: 'Neues Produkt', price: 0, unit: 'stk', pledgeAmount: 0 };
-        MOCK_PRODUCTS.push(newProduct);
-        return newProduct;
+    addProduct: async ({ barcode, price }) => {
+        if (!barcode || typeof barcode !== 'string') {
+            throw new ProductError('Barcode ist erforderlich und muss eine Zeichenkette sein');
+        }
+
+        if (!price || typeof price !== 'number' || price <= 0) {
+            throw new ProductError('Preis ist erforderlich und muss eine positive Zahl sein');
+        }
+
+        const payload = {
+            barcodeId: barcode,
+            price: price
+        };
+
+        try {
+            console.log('Adding product:', payload);
+            const response = await apiClient.post('/product/create', payload);
+            console.log('Product added:', response);
+            return response;
+        } catch (error) {
+            console.error('Error adding product:', error);
+            throw new ProductError(error.message || 'Fehler beim Hinzufügen des Produkts');
+        }
     }
 };
 

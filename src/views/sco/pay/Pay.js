@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import CancelDialog from '../../../utils/components/CancelDialog';
-
+import { transactionService } from '../../../api/services/transactionService';
 
 function Pay() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const transactionId = location?.state?.transactionId || null;
 
   const [grossPrice, setGrossPrice] = useState(null);
   const [vatRate, setVatRate] = useState(0.19);
@@ -15,11 +17,19 @@ function Pay() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   useEffect(() => {
-    const fetchPrice = async () => {
+    const fetchTransactionDetails = async () => {
+      if (!transactionId) {
+        setError(new Error('Keine Transaktions-ID gefunden'));
+        setLoading(false);
+        return;
+      }
+
       try {
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        const mockedGrossPrice = 67.00;
-        setGrossPrice(mockedGrossPrice);
+        const response = await transactionService.getTransaction(transactionId);
+        if (response.status === 'paid') {
+          navigate('/sco/complete');
+        }
+        setGrossPrice(response.totalAmount);
       } catch (err) {
         setError(err);
       } finally {
@@ -27,22 +37,33 @@ function Pay() {
       }
     };
 
-    fetchPrice();
-  }, []);
+    fetchTransactionDetails();
+  }, [transactionId]);
+
+  const displayTransactionInfo = () => {
+    if (!transactionId) return null;
+
+    return (
+      <div className="mb-4 px-4 py-2 bg-gray-100 rounded-lg">
+        <p className="text-sm text-gray-600">Transaktions-ID:</p>
+        <p className="font-mono text-gray-800">{transactionId}</p>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
       <div className="container mx-auto p-4 h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Lade Preis...</p>
+          <p className="mt-2 text-gray-600">Lade Transaktionsdaten...</p>
         </div>
       </div>
     );
   }
 
   if (error) {
-    return <div className="container mx-auto p-4 text-center text-red-500">Fehler beim Laden des Preises: {error.message}</div>;
+    return <div className="container mx-auto p-4 text-center text-red-500">Fehler: {error.message}</div>;
   }
 
   const calculateVatAmount = (grossPrice) => {
@@ -85,7 +106,7 @@ function Pay() {
   const handleCancelConfirm = () => {
     setShowCancelDialog(false);
     navigate('/');
-  }
+  };
 
   return (
     <PayPalScriptProvider options={{ "client-id": "AbV-7ICaqhM9Xn21eTHQakdRmE0F5IS83yhLr5QNQBIWvbDZcqPPytIFq3AEPKjh09a3lpmMaQMo2DyW", "currency": "EUR", "disable-funding": "card" }}>
@@ -100,6 +121,8 @@ function Pay() {
         <div className="bg-white rounded-2xl shadow-xl p-16 max-w-2xl w-full mx-auto">
           <h1 className="text-4xl font-bold mb-8 text-green-700 text-center tracking-tight">Checkout</h1>
 
+          {displayTransactionInfo()}
+
           <div className="bg-gray-50 rounded-xl p-10 mb-8 shadow-inner">
             {displayPriceBreakdown()}
           </div>
@@ -111,7 +134,6 @@ function Pay() {
                 color: 'gold',
                 tagline: false,
                 height: 52,
-
                 shape: 'rect',
                 label: 'paypal'
               }}
@@ -122,6 +144,7 @@ function Pay() {
                       amount: {
                         value: calculateNetPrice(grossPrice).toFixed(2),
                       },
+                      reference_id: transactionId,
                     },
                   ],
                 });
@@ -129,8 +152,9 @@ function Pay() {
               onApprove={async (data, actions) => {
                 try {
                   const details = await actions.order.capture();
-                  alert("Transaktion erfolgreich von " + details.payer.name.given_name + data.orderID);
-                  
+                  await transactionService.completeTransaction(data.orderID);
+
+                  navigate('/sco/complete');
                 } catch (err) {
                   setPaymentError("Es gab einen Fehler bei der PayPal-Zahlung.");
                   console.error("PayPal Capture Fehler:", err);

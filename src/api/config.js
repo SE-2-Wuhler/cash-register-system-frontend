@@ -1,9 +1,4 @@
 export const API_CONFIG = {
-    BASE_URL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000/api',
-    ENDPOINTS: {
-        PRODUCE: '/produce',
-        SCAN: '/scan',
-        ORDERS: '/orders'
-    },
+    BASE_URL: 'http://localhost:8080',
     TIMEOUT: 5000
 };
