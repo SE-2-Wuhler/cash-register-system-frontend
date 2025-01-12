@@ -75,7 +75,6 @@ function Pay() {
     }
     return null;
   };
-  const paypalClientId = "AbV-7ICaqhM9Xn21eTHQakdRmE0F5IS83yhLr5QNQBIWvbDZcqPPytIFq3AEPKjh09a3lpmMaQMo2DyW";
   return (
     <PayPalScriptProvider options={{ "client-id": "AbV-7ICaqhM9Xn21eTHQakdRmE0F5IS83yhLr5QNQBIWvbDZcqPPytIFq3AEPKjh09a3lpmMaQMo2DyW", "currency": "EUR", "disable-funding": "card" }}>
       <div className="min-h-screen flex items-center justify-center bg-green-50"> {/* Hauptcontainer für vertikale Zentrierung */}
@@ -110,7 +109,8 @@ function Pay() {
               onApprove={async (data, actions) => {
                 try {
                   const details = await actions.order.capture();
-                  alert("Transaktion erfolgreich von " + details.payer.name.given_name);
+                  alert("Transaktion erfolgreich von " + details.payer.name.given_name + data.orderID);
+                  
                 } catch (err) {
                   setPaymentError("Es gab einen Fehler bei der PayPal-Zahlung.");
                   console.error("PayPal Capture Fehler:", err);
