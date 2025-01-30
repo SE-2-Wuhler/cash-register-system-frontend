@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, Trash2, Plus, Minus, CreditCard, XCircle } from 'lucide-react';
+import { AlertCircle, Trash2, Plus, Minus, CreditCard, XCircle, ArrowLeft } from 'lucide-react';
 import { productService } from '../../api/services/productService';
 import { useApi } from '../../hooks/useApi';
 import { transactionService } from '../../api/services/transactionService';
@@ -85,7 +85,7 @@ const ProductButton = ({ item, onScan }) => (
                 <img
                     src={item.imgUrl}
                     alt={item.name}
-                    className="w-full h-full object-cover rounded-md"
+                    className="w-full h-full object-contain rounded-md"
                     onError={(e) => {
                         // Remove the image container if loading fails
                         e.target.parentElement.style.display = 'none';
@@ -98,7 +98,7 @@ const ProductButton = ({ item, onScan }) => (
         <div className="flex-1 text-left">
             <div className="font-medium text-base mb-0.5">{item.name}</div>
             <div className="text-gray-600 text-sm">
-                {item.price.toFixed(2)}€/{item.unit}
+                {item.price.toFixed(2)}€ / Stück
                 {item.isOrganic && <span className="text-green-600 ml-2">Bio</span>}
             </div>
         </div>
@@ -120,11 +120,11 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
         <div className="flex items-center justify-between border-b pb-4 mb-4">
             <div className="flex items-center gap-4 flex-1">
                 {!item.isPledge && item.imgUrl && (
-                    <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden  flex-shrink-0">
                         <img
                             src={item.imgUrl}
                             alt={item.name}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-contain"
                             onError={(e) => {
                                 e.target.parentElement.style.display = 'none';
                             }}
@@ -137,11 +137,16 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
                         {item.isPledge && <span className="text-green-600 ml-2">(Pfand)</span>}
                     </div>
                     <div className="text-gray-600 text-lg">
-                        {item.price.toFixed(2)}€
+                        + {item.price.toFixed(2) * item.quantity}€ ({item.price.toFixed(2)}€ / Stück)
                         {!item.isPledge && item.isOrganic &&
                             <span className="text-green-600 ml-2">Bio</span>
                         }
                     </div>
+                    {item.pledgeValue > 0 &&
+                        <div className="text-gray-500 text-sm">
+                            <span className="">+ {item.pledgeValue.toFixed(2) * item.quantity}€ Pfand ({item.pledgeValue.toFixed(2)}€ / Stück)</span>
+                        </div>
+                    }
                 </div>
             </div>
             <div className="flex items-center space-x-6">
@@ -187,8 +192,30 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
 // --------------
 // 2. MAIN SCO COMPONENT
 // --------------
+
+
 const Sco = () => {
     const navigate = useNavigate();
+    // [Previous state declarations remain the same...]
+
+    // Add global click handler
+    useEffect(() => {
+        const handleGlobalClick = () => {
+            // Small timeout to ensure click handling is complete
+            setTimeout(() => {
+                if (document.activeElement instanceof HTMLElement) {
+                    document.activeElement.blur();
+                }
+            }, 0);
+        };
+
+        window.addEventListener('click', handleGlobalClick);
+        
+        // Cleanup
+        return () => {
+            window.removeEventListener('click', handleGlobalClick);
+        };
+    }, []);
 
     const [scannedItems, setScannedItems] = useState([]);
     const [notification, setNotification] = useState(null);
@@ -196,13 +223,14 @@ const Sco = () => {
     const [barcodeBuffer, setBarcodeBuffer] = useState('');
     const [lastKeypressTime, setLastKeypressTime] = useState(0);
     const [showCancelDialog, setShowCancelDialog] = useState(false);
+    const [activeCategory, setActiveCategory] = useState(null);
 
     const {
         data: items,
         loading,
         error,
         execute: fetchProduceItems
-    } = useApi(productService.getNonScanableItems);  // Changed from getAllProduce to getNonScanableItems
+    } = useApi(productService.getNonScanableItems);
 
     const {
         execute: fetchProductByBarcode,
@@ -236,6 +264,15 @@ const Sco = () => {
             setProduceItems(items);
         }
     }, [items]);
+
+    useEffect(() => {
+        document.body.setAttribute('tabindex', '-1');
+        document.body.focus();
+
+        return () => {
+            document.body.removeAttribute('tabindex');
+        };
+    }, []);
 
     // Barcode scanning effect
     useEffect(() => {
@@ -272,7 +309,7 @@ const Sco = () => {
     const handleScan = (item) => {
         if (item.pledge) {
             const pledgeAlreadyScanned = scannedItems.some(
-                scanItem => scanItem.isPledge && scanItem.id === item.id  // Compare by actual ID
+                scanItem => scanItem.isPledge && scanItem.id === item.id
             );
 
             if (pledgeAlreadyScanned) {
@@ -281,18 +318,18 @@ const Sco = () => {
             }
 
             const newItem = {
-                id: item.id,  // Use the actual UUID instead of barcodeId
+                id: item.id,
                 name: 'Pfand Rückgabe',
                 price: -item.value,
                 quantity: 1,
                 isPledge: true,
-                barcodeId: item.barcodeId  // Keep barcodeId for reference if needed
+                barcodeId: item.barcodeId
             };
             setScannedItems(prev => [...prev, newItem]);
             showNotification(`Pfand (${item.value.toFixed(2)}€) wurde abgezogen`);
         } else {
             const existingItemIndex = scannedItems.findIndex(
-                (scanItem) => scanItem.id === item.id  // Compare by id instead of name
+                (scanItem) => scanItem.id === item.id
             );
 
             if (existingItemIndex !== -1) {
@@ -321,7 +358,7 @@ const Sco = () => {
                     item.id === id
                         ? { ...item, quantity: Math.max(0, item.quantity + change) }
                         : item
-            )
+                )
                 .filter((item) => item.quantity > 0)
         );
     };
@@ -329,8 +366,8 @@ const Sco = () => {
     const removeItem = (id) => {
         setScannedItems((prev) => prev.filter((item) => item.id !== id));
     };
+
     const groupedItems = produceItems.reduce((groups, item) => {
-        // Split categories string and take the first category
         const category = item.category?.split(',')[0]?.trim() || 'Other';
         if (!groups[category]) {
             groups[category] = [];
@@ -355,7 +392,7 @@ const Sco = () => {
     };
 
     const calculateTotal = () =>
-        scannedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        scannedItems.reduce((sum, item) => sum + (item.price + item.pledgeValue) * item.quantity, 0);
 
     const handlePayment = async () => {
         try {
@@ -367,10 +404,9 @@ const Sco = () => {
                     quantity: item.quantity
                 }));
 
-            // Use actual IDs for pledges
             const pledges = scannedItems
                 .filter(item => item.isPledge)
-                .map(item => item.id);  // Use ID instead of barcodeId
+                .map(item => item.id);
 
             const response = await transactionService.createTransaction(items, pledges);
 
@@ -387,9 +423,7 @@ const Sco = () => {
             console.error('Transaction error:', error);
         }
     };
-    // --------------
-    // 3. RENDER
-    // --------------
+
     return (
         <div className="h-screen p-4 bg-green-50">
             <NotificationBar notification={notification} />
@@ -423,7 +457,7 @@ const Sco = () => {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                    {scannedItems.map((item) => (
+                                {scannedItems.map((item) => (
                                     <CartItem
                                         key={item.id}
                                         item={item}
@@ -465,39 +499,49 @@ const Sco = () => {
 
                 {/* Right side - Produce items */}
                 <div className="w-1/2 bg-white rounded-lg shadow p-4 overflow-y-auto">
-                    <h2 className="text-lg font-bold mb-4">Produkte</h2>
-                    {loading ? (
-                        <div className="text-center py-6">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
-                            <p className="mt-2 text-gray-600 text-sm">Lade Produkte...</p>
-                        </div>
-                    ) : error ? (
-                        <div className="text-center py-6 text-red-500 text-sm">
-                            {error}
+                    {activeCategory ? (
+                        <>
                             <button
-                                onClick={fetchProduceItems}
-                                className="mt-2 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-xs"
+                                onClick={() => setActiveCategory(null)}
+                                className="mb-4 text-green-500 hover:text-green-600 flex items-center"
                             >
-                                Erneut versuchen
+                                <ArrowLeft size={20} className="mr-2" />
+                                Zurück zu Kategorien
                             </button>
-                        </div>
-                    ) : (
-                        Object.entries(groupedItems).map(([category, items]) => (
-                            <div key={category} className="mb-6">
-                                <h3 className="text-sm font-semibold mb-2 capitalize">
-                                    {category}
-                                </h3>
-                                <div className="grid grid-cols-3 gap-2 auto-rows-fr">
-                                    {items.map((item) => (
-                                        <ProductButton
-                                            key={item.id}
-                                            item={item}
-                                            onScan={handleScan}
-                                        />
-                                    ))}
-                                </div>
+                            <h2 className="text-lg font-bold mb-4">{activeCategory}</h2>
+                            <div className="grid grid-cols-3 gap-2 auto-rows-fr">
+                                {groupedItems[activeCategory]?.map((item) => (
+                                    <ProductButton
+                                        key={item.id}
+                                        item={item}
+                                        onScan={handleScan}
+                                    />
+                                ))}
                             </div>
-                        ))
+                        </>
+                    ) : (
+                        <>
+                            <h2 className="text-lg font-bold mb-4">Kategorien</h2>
+                            <div className="grid grid-cols-3 gap-2 auto-rows-fr">
+                                {Object.keys(groupedItems).map((category) => (
+                                    <button
+                                        key={category}
+                                        onClick={() => setActiveCategory(category)}
+                                        className="relative overflow-hidden group w-full bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 p-6 rounded-xl text-center transition-all duration-300 shadow-sm hover:shadow-md border border-green-200/50"
+                                    >
+                                        <div className="flex flex-col items-center justify-center space-y-2">
+                                            <h3 className="text-lg font-semibold text-gray-800 group-hover:text-gray-900">
+                                                {category}
+                                            </h3>
+                                            <p className="text-sm text-gray-500 group-hover:text-gray-600">
+                                                Produkte anzeigen
+                                            </p>
+                                        </div>
+                                        <div className="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/5 to-green-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                    </button>
+                                ))}
+                            </div>
+                        </>
                     )}
                 </div>
             </div>

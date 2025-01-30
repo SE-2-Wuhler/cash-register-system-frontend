@@ -118,10 +118,10 @@ function Pay() {
           message="Möchtest du den aktuellen Vorgang wirklich abbrechen? Alle gescannten Artikel gehen verloren."
         />
 
-        <div className="bg-white rounded-2xl shadow-xl p-16 max-w-2xl w-full mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl p-4 max-w-2xl w-full mx-auto">
           <h1 className="text-4xl font-bold mb-8 text-green-700 text-center tracking-tight">Checkout</h1>
 
-          {displayTransactionInfo()}
+          {/* {displayTransactionInfo()} */}
 
           <div className="bg-gray-50 rounded-xl p-10 mb-8 shadow-inner">
             {displayPriceBreakdown()}
@@ -168,7 +168,7 @@ function Pay() {
             {paymentError && <p className="mt-2 text-red-500 text-center">{paymentError}</p>}
 
             <button
-              onClick={() => { navigate('/sco/complete')}}
+              onClick={() => { navigate('/sco/complete') }}
               className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 px-8 rounded w-full mt-6"
             >
               Barzahlung

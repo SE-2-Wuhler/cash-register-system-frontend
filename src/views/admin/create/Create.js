@@ -12,12 +12,13 @@ const NotificationBar = ({ notification }) => (
     </div>
 );
 
-const AddProduct = () => {
+const Create = () => {
     const [notification, setNotification] = useState(null);
     const [barcodeBuffer, setBarcodeBuffer] = useState('');
     const [lastKeypressTime, setLastKeypressTime] = useState(0);
     const [lastScannedProduct, setLastScannedProduct] = useState(null);
     const [price, setPrice] = useState('');
+    const [pledge, setPledge] = useState('');
 
     const {
         execute: addProduct,
@@ -30,6 +31,14 @@ const AddProduct = () => {
         // Allow only numbers and one decimal point
         if (/^\d*\.?\d*$/.test(value)) {
             setPrice(value);
+        }
+    };
+
+    const handlePledgeChange = (event) => {
+        const value = event.target.value;
+        // Allow only numbers and one decimal point
+        if (/^\d*\.?\d*$/.test(value)) {
+            setPledge(value);
         }
     };
 
@@ -60,7 +69,8 @@ const AddProduct = () => {
                 try {
                     const result = await addProduct({
                         barcode: barcodeBuffer,
-                        price: parseFloat(price)
+                        price: parseFloat(price),
+                        pledgeValue: parseFloat(pledge)
                     });
                     setLastScannedProduct(result);
                     setNotification({
@@ -120,6 +130,19 @@ const AddProduct = () => {
                             placeholder="0.00"
                         />
                     </div>
+                    <div className="mb-6">
+                        <label htmlFor="pledge" className="block text-sm font-medium text-gray-700 mb-2">
+                            Pledge Value (€)
+                        </label>
+                        <input
+                            type="text"
+                            id="pledge"
+                            value={pledge}
+                            onChange={handlePledgeChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="0.00"
+                        />
+                    </div>
 
                     {/* Scanning Status */}
                     <div className="flex items-center justify-center p-12 border-2 border-dashed rounded-lg mb-8">
@@ -165,4 +188,4 @@ const AddProduct = () => {
     );
 };
 
-export default AddProduct;
+export default Create;

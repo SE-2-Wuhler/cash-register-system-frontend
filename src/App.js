@@ -6,7 +6,7 @@ import Complete from "./views/sco/complete/Complete";
 import './App.css';
 import Pledge from "./views/pledge/Pledge";
 import { useEffect } from "react"
-import AddProduct from "./views/admin/addProduct/AddProduct";
+import Create from "./views/admin/create/Create";
 
 
 function App() {
@@ -17,7 +17,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/admin/addProduct" element={<AddProduct />} />
+        <Route path="/admin/create" element={<Create />} />
         <Route path="/sco" element={<Sco />} />
         <Route path="/sco/pay" element={<Pay />} />
         <Route path="/pledge" element={<Pledge />} />

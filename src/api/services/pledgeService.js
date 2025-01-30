@@ -26,7 +26,7 @@ export const pledgeService = {
     getAllItemsWithPledge: async () => {
         try {
             console.log('Fetching all items with pledge');
-            const response = await apiClient.get('/pledge/getAll');
+            const response = await apiClient.get('/pledge/get-all-products-with-pledge');
             console.log('Items with pledge fetched:', response);
             return response;
         } catch (error) {
