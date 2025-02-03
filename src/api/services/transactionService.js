@@ -21,6 +21,22 @@ export const transactionService = {
         }
     },
 
+    cancelTransaction: async (transactionId) => {
+        try {
+            if (!transactionId) {
+                throw new TransactionError('Transaction ID is required');
+            }
+
+            console.log('Cancelling transaction:', transactionId);
+            const response = await apiClient.post(`/transaction/cancel/${transactionId}`);
+            console.log('Transaction cancelled:', response);
+            return response;
+        } catch (error) {
+            console.error('Error cancelling transaction:', error.message);
+            throw new TransactionError(error.message);
+        }
+    },
+
     getTransaction: async (transactionId) => {
         try {
             if (!transactionId) {

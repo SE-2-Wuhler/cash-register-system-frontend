@@ -137,7 +137,9 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
                         {item.isPledge && <span className="text-green-600 ml-2">(Pfand)</span>}
                     </div>
                     <div className="text-gray-600 text-lg">
-                        + {item.price.toFixed(2) * item.quantity}€ ({item.price.toFixed(2)}€ / Stück)
+                        {/* {!item.isPledge && '+'} */}
+                        {(item.price * item.quantity).toFixed(2)} €
+                        {!item.isPledge && '- (' + item.price.toFixed(2) + '€ / Stück)'}
                         {!item.isPledge && item.isOrganic &&
                             <span className="text-green-600 ml-2">Bio</span>
                         }
@@ -289,6 +291,7 @@ const Sco = () => {
             } else if (event.key === 'Enter' && barcodeBuffer) {
                 try {
                     const product = await fetchProductByBarcode(barcodeBuffer);
+                    console.log(product);
                     if (product) {
                         handleScan(product);
                     } else {
@@ -320,10 +323,11 @@ const Sco = () => {
             const newItem = {
                 id: item.id,
                 name: 'Pfand Rückgabe',
-                price: -item.value,
+                price: -item.value.toFixed(2),
                 quantity: 1,
                 isPledge: true,
-                barcodeId: item.barcodeId
+                barcodeId: item.barcodeId,
+                pledgeValue: 0
             };
             setScannedItems(prev => [...prev, newItem]);
             showNotification(`Pfand (${item.value.toFixed(2)}€) wurde abgezogen`);
@@ -392,8 +396,11 @@ const Sco = () => {
     };
 
     const calculateTotal = () =>
-        scannedItems.reduce((sum, item) => sum + (item.price + item.pledgeValue) * item.quantity, 0);
-
+        scannedItems.reduce(
+            (sum, item) =>
+                sum + ((Number(item.price) + Number(item.pledgeValue)) * item.quantity),
+            0
+        );
     const handlePayment = async () => {
         try {
             console.log('Creating transaction with items:', scannedItems);

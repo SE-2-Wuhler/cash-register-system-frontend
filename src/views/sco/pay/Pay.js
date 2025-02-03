@@ -37,8 +37,6 @@ function Pay() {
         if (response.status === 'paid') {
           navigate('/sco/complete');
         }
-        console.log("laökjfaöslfj");
-        console.log(response)
         setGrossPrice(response.totalAmount);
       } catch (err) {
         setError(err);
@@ -75,6 +73,10 @@ function Pay() {
   // Function to create PayPal Order
   const createPayPalOrder = async () => {
     try {
+      if (grossPrice < 0) {
+        setPaymentError("'Negative' Beträge müssen an normalen Kassen abgewickelt werden.");
+      }
+
       const accessToken = await getPayPalAccessToken();
 
       const response = await fetch(`${PAYPAL_API_BASE_URL}/v2/checkout/orders`, {
@@ -134,6 +136,7 @@ function Pay() {
       console.log(data)
       if (data.status === 'APPROVED') {
         setPaymentCompleted(true);
+        await transactionService.completeTransaction(data.id);
         navigate('/sco/complete');
       } else {
         setPaymentError("Die Zahlung wurde noch nicht abgeschlossen.");
@@ -209,6 +212,7 @@ function Pay() {
 
   const handleCancelConfirm = () => {
     setShowCancelDialog(false);
+    transactionService.cancelTransaction(transactionId);
     navigate('/');
   };
 
