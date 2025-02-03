@@ -185,14 +185,14 @@ function Pay() {
 
       return (
         <div>
-          <div className="flex justify-between items-center">
+          {/* <div className="flex justify-between items-center">
             <span className="text-lg text-gray-700">Nettopreis:</span>
             <span className="text-lg font-bold text-gray-700">{netPrice.toFixed(2)} €</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-500">+ {vatRate * 100}% MwSt.:</span>
             <span className="text-sm text-gray-500">{(vatAmount).toFixed(2)} €</span>
-          </div>
+          </div> */}
           <div className="flex justify-between items-center mt-2">
             <span className="text-xl font-bold text-green-600">Bruttopreis:</span>
             <span className="text-xl font-bold text-green-600 tracking-tight">{grossPrice.toFixed(2)} €</span>
@@ -252,12 +252,12 @@ function Pay() {
 
           {paymentError && <p className="mt-2 text-red-500 text-center">{paymentError}</p>}
 
-          <button
+          {/* <button
             onClick={() => { navigate('/sco/complete') }}
             className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-8 rounded w-full mt-6"
           >
             Barzahlung
-          </button>
+          </button> */}
 
           <button
             onClick={handleCancel}

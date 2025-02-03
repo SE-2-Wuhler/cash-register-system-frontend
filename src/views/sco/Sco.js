@@ -503,8 +503,8 @@ const Sco = () => {
                         <>
                             <button
                                 onClick={() => setActiveCategory(null)}
-                                className="mb-4 text-green-500 hover:text-green-600 flex items-center"
-                            >
+                                className="bg-green-100 hover:bg-green-200 p-3 rounded-lg text-center transition-colors flex items-center gap-3 focus:outline-none mb-4"
+                                >
                                 <ArrowLeft size={20} className="mr-2" />
                                 Zurück zu Kategorien
                             </button>
