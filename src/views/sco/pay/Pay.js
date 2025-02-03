@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { useLocation, useNavigate } from 'react-router-dom';
 import CancelDialog from '../../../utils/components/CancelDialog';
+import { QRCodeSVG } from 'qrcode.react'; // Import QRCode library
 import { transactionService } from '../../../api/services/transactionService';
+
+// PayPal API credentials
+const PAYPAL_CLIENT_ID = 'AbV-7ICaqhM9Xn21eTHQakdRmE0F5IS83yhLr5QNQBIWvbDZcqPPytIFq3AEPKjh09a3lpmMaQMo2DyW';
+const PAYPAL_SECRET = 'EP-G2hmsSpg8D_TYqvvJeHZbJYRDxvpXsSatgpyGrk99x1SuTFEKoaFNGlC757f9qjaqZL-SMh86SKtB';
+const PAYPAL_API_BASE_URL = 'https://api-m.sandbox.paypal.com'; // Sandbox URL
 
 function Pay() {
   const navigate = useNavigate();
@@ -15,6 +20,9 @@ function Pay() {
   const [error, setError] = useState(null);
   const [paymentError, setPaymentError] = useState(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [paypalOrderId, setPaypalOrderId] = useState(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState(null);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   useEffect(() => {
     const fetchTransactionDetails = async () => {
@@ -29,6 +37,8 @@ function Pay() {
         if (response.status === 'paid') {
           navigate('/sco/complete');
         }
+        console.log("laökjfaöslfj");
+        console.log(response)
         setGrossPrice(response.totalAmount);
       } catch (err) {
         setError(err);
@@ -39,6 +49,100 @@ function Pay() {
 
     fetchTransactionDetails();
   }, [transactionId]);
+
+  // Function to get PayPal Access Token
+  const getPayPalAccessToken = async () => {
+    const auth = btoa(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`); // Base64 encode client ID and secret
+
+    try {
+      const response = await fetch(`${PAYPAL_API_BASE_URL}/v1/oauth2/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${auth}`,
+        },
+        body: 'grant_type=client_credentials',
+      });
+
+      const data = await response.json();
+      return data.access_token;
+    } catch (err) {
+      console.error('Fehler beim Abrufen des PayPal Access Tokens:', err);
+      throw err;
+    }
+  };
+
+  // Function to create PayPal Order
+  const createPayPalOrder = async () => {
+    try {
+      const accessToken = await getPayPalAccessToken();
+
+      const response = await fetch(`${PAYPAL_API_BASE_URL}/v2/checkout/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          intent: 'CAPTURE',
+          purchase_units: [
+            {
+              amount: {
+                currency_code: 'EUR',
+                value: (grossPrice).toFixed(2),
+              },
+              reference_id: transactionId,
+            },
+          ],
+          application_context: {
+            shipping_preference: 'NO_SHIPPING', 
+            user_action: 'PAY_NOW', 
+            return_url: 'https://guthib.com/', 
+            cancel_url: 'https://guthib.com/'
+          },
+        }),
+      });
+
+      const data = await response.json();
+      if (data.id) {
+        setPaypalOrderId(data.id);
+        console.log(data)
+        setQrCodeUrl(data.links.find(link => link.rel === 'approve').href); // Get approval URL for QR Code
+      } else {
+        throw new Error('PayPal-Order konnte nicht erstellt werden.');
+      }
+    } catch (err) {
+      setPaymentError("Es gab einen Fehler bei der Erstellung der PayPal-Order.");
+      console.error("PayPal Order Fehler:", err);
+      console.log(err)
+    }
+  };
+
+  // Function to check PayPal Order status
+  const checkPaymentStatus = async () => {
+    try {
+      const accessToken = await getPayPalAccessToken();
+
+      const response = await fetch(`${PAYPAL_API_BASE_URL}/v2/checkout/orders/${paypalOrderId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      const data = await response.json();
+      console.log(data)
+      if (data.status === 'APPROVED') {
+        setPaymentCompleted(true);
+        navigate('/sco/complete');
+      } else {
+        setPaymentError("Die Zahlung wurde noch nicht abgeschlossen.");
+      }
+    } catch (err) {
+      setPaymentError("Es gab einen Fehler bei der Überprüfung des Zahlungsstatus.");
+      console.error("PayPal Status Fehler:", err);
+    }
+  };
 
   const displayTransactionInfo = () => {
     if (!transactionId) return null;
@@ -109,85 +213,65 @@ function Pay() {
   };
 
   return (
-    <PayPalScriptProvider options={{ "client-id": "AbV-7ICaqhM9Xn21eTHQakdRmE0F5IS83yhLr5QNQBIWvbDZcqPPytIFq3AEPKjh09a3lpmMaQMo2DyW", "currency": "EUR", "disable-funding": "card" }}>
-      <div className="min-h-screen flex items-center justify-center bg-green-50">
-        <CancelDialog
-          isOpen={showCancelDialog}
-          onClose={() => setShowCancelDialog(false)}
-          onConfirm={handleCancelConfirm}
-          message="Möchtest du den aktuellen Vorgang wirklich abbrechen? Alle gescannten Artikel gehen verloren."
-        />
+    <div className="min-h-screen flex items-center justify-center bg-green-50">
+      <CancelDialog
+        isOpen={showCancelDialog}
+        onClose={() => setShowCancelDialog(false)}
+        onConfirm={handleCancelConfirm}
+        message="Möchtest du den aktuellen Vorgang wirklich abbrechen? Alle gescannten Artikel gehen verloren."
+      />
 
-        <div className="bg-white rounded-2xl shadow-xl p-4 max-w-2xl w-full mx-auto">
-          <h1 className="text-4xl font-bold mb-8 text-green-700 text-center tracking-tight">Checkout</h1>
+      <div className="bg-white rounded-2xl shadow-xl p-4 max-w-2xl w-full mx-auto">
+        <h1 className="text-4xl font-bold mb-8 text-green-700 text-center tracking-tight">Checkout</h1>
 
-          {/* {displayTransactionInfo()} */}
+        <div className="bg-gray-50 rounded-xl p-10 mb-8 shadow-inner">
+          {displayPriceBreakdown()}
+        </div>
 
-          <div className="bg-gray-50 rounded-xl p-10 mb-8 shadow-inner">
-            {displayPriceBreakdown()}
-          </div>
-
-          <div className="mb-10">
-            <PayPalButtons
-              style={{
-                layout: 'vertical',
-                color: 'gold',
-                tagline: false,
-                height: 52,
-                shape: 'rect',
-                label: 'paypal'
-              }}
-              createOrder={(data, actions) => {
-                return actions.order.create({
-                  purchase_units: [
-                    {
-                      amount: {
-                        value: calculateNetPrice(grossPrice).toFixed(2),
-                      },
-                      reference_id: transactionId,
-                    },
-                  ],
-                });
-              }}
-              onApprove={async (data, actions) => {
-                try {
-                  const details = await actions.order.capture();
-                  await transactionService.completeTransaction(data.orderID);
-
-                  navigate('/sco/complete');
-                } catch (err) {
-                  setPaymentError("Es gab einen Fehler bei der PayPal-Zahlung.");
-                  console.error("PayPal Capture Fehler:", err);
-                }
-              }}
-              onError={(err) => {
-                setPaymentError("Es gab einen Fehler bei der PayPal-Zahlung.");
-                console.error("PayPal Fehler:", err);
-              }}
-            />
-            {paymentError && <p className="mt-2 text-red-500 text-center">{paymentError}</p>}
-
+        <div className="mb-10">
+          {!paypalOrderId ? (
             <button
-              onClick={() => { navigate('/sco/complete') }}
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 px-8 rounded w-full mt-6"
+              onClick={createPayPalOrder}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded w-full"
             >
-              Barzahlung
+              Mit QR-Code bei PayPal bezahlen
             </button>
+          ) : (
+            <>
+              <div className="flex justify-center mb-4">
+                <QRCodeSVG value={qrCodeUrl} />
+              </div>
+              <button
+                onClick={checkPaymentStatus}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded w-full"
+              >
+                Zahlungsstatus überprüfen
+              </button>
+            </>
+          )}
 
-            <button
-              onClick={handleCancel}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded w-full mt-6"
-            >
-              Abbrechen
-            </button>
-          </div>
+          {paymentError && <p className="mt-2 text-red-500 text-center">{paymentError}</p>}
 
-          <div className="border-t border-gray-200 pt-8 text-center text-sm text-gray-500">
-            Durch Klicken auf "Mit PayPal bezahlen" oder "Barzahlung" stimmen Sie unseren <a href="#" className="text-green-600">Nutzungsbedingungen</a> und <a href="#" className="text-green-600">Datenschutzbestimmungen</a> zu.
-          </div>
+          <button
+            onClick={() => { navigate('/sco/complete') }}
+            className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-8 rounded w-full mt-6"
+          >
+            Barzahlung
+          </button>
+
+          <button
+            onClick={handleCancel}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded w-full mt-6"
+          >
+            Abbrechen
+          </button>
+        </div>
+
+        <div className="border-t border-gray-200 pt-8 text-center text-sm text-gray-500">
+          Durch Klicken auf "Mit PayPal bezahlen" oder "Barzahlung" stimmen Sie unseren <a href="#" className="text-green-600">Nutzungsbedingungen</a> und <a href="#" className="text-green-600">Datenschutzbestimmungen</a> zu.
         </div>
       </div>
-    </PayPalScriptProvider>
+    </div>
   );
 }
 

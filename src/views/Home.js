@@ -55,7 +55,7 @@ const HomePage = () => {
           </div>
         </div>
 
-        <div className="px-4">
+        {/* <div className="px-4">
           <div
             onClick={() => navigate('/leave')}
             className="group cursor-pointer bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden max-w-md mx-auto"
@@ -73,7 +73,7 @@ const HomePage = () => {
               <span className="text-white font-medium">Zum Ausgang →</span>
             </div>
           </div>
-        </div>
+        </div> */}
 
         <div className="mt-16 text-center text-gray-500 text-sm">
           <p>Benötigen Sie Hilfe? Unser Personal steht Ihnen gerne zur Verfügung.</p>
